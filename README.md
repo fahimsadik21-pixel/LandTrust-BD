@@ -22,7 +22,7 @@
 
 ## 📋 সংক্ষিপ্ত বিবরণ | Overview
 
-**LandTrust BD** হলো একটি **interactive prototype** যা ভূমি লেনদেনে জালিয়াতি শনাক্ত ও প্রতিরোধে স্মার্ট যাচাই ব্যবস্থা দেখায়। এটি LandTech 2026 P3 hackathon-এর জন্য তৈরি।
+**LandTrust BD** হলো একটি **interactive prototype** যা ভূমি লেনদেনে জালিয়াতি শনাক্ত ও প্রতিরোধে স্মার্ট যাচাই ব্যবস্থা দেখায়। 
 
 > ⚠️ **গুরুত্বপূর্ণ:** এটি কোনো সরকারি ওয়েবসাইট, live land-record service বা legal verification tool **নয়**।  
 > সব ব্যক্তি, parcel, deed ও audit data সম্পূর্ণ **synthetic/কাল্পনিক**।
