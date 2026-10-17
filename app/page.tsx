@@ -27,6 +27,7 @@ import type { LucideIcon } from "lucide-react";
 type Language = "bn" | "en";
 type ScreenKey =
   | "home"
+  | "citizen"
   | "search"
   | "comparison"
   | "timeline"
@@ -34,8 +35,11 @@ type ScreenKey =
   | "forensic"
   | "officer"
   | "lock"
+  | "review"
   | "report"
   | "ledger";
+
+type DemoScenario = "corrupted" | "clean";
 
 type AuditEvent = {
   id: string;
@@ -56,6 +60,7 @@ const screenItems: Array<{
   shortEn: string;
 }> = [
   { key: "home", icon: HomeIcon, bn: "হোম", en: "Home", shortBn: "সেবার পরিচিতি", shortEn: "Service overview" },
+  { key: "citizen", icon: ShieldCheck, bn: "নাগরিক সেবা", en: "Citizen Services", shortBn: "সমস্যা ও সুবিধা", shortEn: "Problems & benefits" },
   { key: "search", icon: Search, bn: "পার্সেল ও দলিল অনুসন্ধান", en: "Parcel & Deed Search", shortBn: "যাচাই শুরু", shortEn: "Start verification" },
   { key: "comparison", icon: ArrowLeftRight, bn: "রেকর্ড তুলনা", en: "Record Comparison", shortBn: "রেজিস্ট্রি বনাম নামজারি", shortEn: "Registry vs mutation" },
   { key: "timeline", icon: GitBranch, bn: "মালিকানা টাইমলাইন", en: "Ownership Timeline", shortBn: "হস্তান্তরের ইতিহাস", shortEn: "Transfer history" },
@@ -63,16 +68,25 @@ const screenItems: Array<{
   { key: "forensic", icon: FileCheck2, bn: "ফরেনসিক PDF যাচাই", en: "Forensic PDF Verify", shortBn: "ডকুমেন্ট হ্যাশ", shortEn: "Document hash" },
   { key: "officer", icon: UserRoundCog, bn: "কর্মকর্তা কনসোল", en: "Officer Console", shortBn: "Parcel ID ও দলিল", shortEn: "Parcel ID & deeds" },
   { key: "lock", icon: LockKeyhole, bn: "সাময়িক ল্যান্ড-লক", en: "Provisional Lock", shortBn: "হোল্ড ও রিভিউ", shortEn: "Hold & review" },
+  { key: "review", icon: ShieldCheck, bn: "ঊর্ধ্বতন পর্যালোচনা", en: "Senior Review", shortBn: "প্রশাসনিক সিদ্ধান্ত", shortEn: "Administrative decision" },
   { key: "report", icon: QrCode, bn: "QR যাচাই প্রতিবেদন", en: "QR Verification Report", shortBn: "যাচাই রসিদ", shortEn: "Verification receipt" },
   { key: "ledger", icon: ScrollText, bn: "অডিট লেজার", en: "Audit Ledger", shortBn: "সময়ভিত্তিক ইতিহাস", shortEn: "Timestamped history" },
 ];
 
 const demoSteps: Array<{ screen: ScreenKey; time: string; bn: string; en: string }> = [
-  { screen: "search", time: "0:00–0:30", bn: "Parcel 105 খুঁজে canonical record প্রস্তুত", en: "Find Parcel 105 and prepare the canonical record" },
-  { screen: "comparison", time: "0:30–1:15", bn: "রেজিস্ট্রি ও নামজারির মালিকানা অমিল দেখান", en: "Reveal the registry–mutation ownership mismatch" },
-  { screen: "risk", time: "1:15–1:55", bn: "দ্বৈত বিক্রয় শনাক্ত করে ৯৫/১০০ ঝুঁকি দেখান", en: "Trigger double-sale detection and a 95/100 risk score" },
-  { screen: "lock", time: "1:55–2:30", bn: "সাময়িক লক দিয়ে কর্মকর্তার রিভিউ দেখান", en: "Place a provisional lock for officer review" },
-  { screen: "report", time: "2:30–3:00", bn: "QR রসিদ ও audit hash দিয়ে যাচাই শেষ", en: "Finish with a QR receipt and audit hash" },
+  { screen: "search", time: "0:00–0:25", bn: "Parcel 105 খুঁজে official record প্রস্তুত", en: "Find Parcel 105 and prepare the official record" },
+  { screen: "comparison", time: "0:25–0:55", bn: "রেজিস্ট্রি ও নামজারির মালিকানা অমিল দেখান", en: "Reveal the registry–mutation ownership mismatch" },
+  { screen: "risk", time: "0:55–1:30", bn: "দ্বৈত বিক্রয় শনাক্ত করে ৯৫/১০০ ঝুঁকি দেখান", en: "Trigger double-sale detection and a 95/100 risk score" },
+  { screen: "lock", time: "1:30–2:00", bn: "সাময়িক লক দিয়ে কর্মকর্তার রিভিউ দেখান", en: "Place a provisional lock for officer review" },
+  { screen: "review", time: "2:00–2:35", bn: "ঊর্ধ্বতন কর্মকর্তা যাচাই করে প্রশাসনিক সিদ্ধান্ত দেন", en: "Senior officer reviews the evidence and records an administrative decision" },
+  { screen: "report", time: "2:35–3:00", bn: "QR রসিদ ও audit hash দিয়ে যাচাই শেষ", en: "Finish with a QR receipt and audit hash" },
+];
+
+const cleanDemoSteps: Array<{ screen: ScreenKey; time: string; bn: string; en: string }> = [
+  { screen: "search", time: "0:00–0:30", bn: "একটি পরিষ্কার Parcel 208 যাচাই শুরু", en: "Start verification for clean Parcel 208" },
+  { screen: "comparison", time: "0:30–1:00", bn: "দুই official record-এ একই মালিক দেখা যায়", en: "Confirm the same owner across official records" },
+  { screen: "risk", time: "1:00–1:35", bn: "নিম্ন ঝুঁকি ও সব rule pass দেখান", en: "Show low risk with all checks passed" },
+  { screen: "report", time: "1:35–2:00", bn: "স্বাভাবিক processing-এর জন্য পরিষ্কার ফলাফল দিন", en: "Finish with a clear result for normal processing" },
 ];
 
 const initialEvents: AuditEvent[] = [
@@ -144,12 +158,14 @@ export default function Home() {
   const [query, setQuery] = useState("Parcel 105");
   const [searched, setSearched] = useState(false);
   const [demoStep, setDemoStep] = useState(-1);
+  const [demoScenario, setDemoScenario] = useState<DemoScenario>("corrupted");
   const [riskScore, setRiskScore] = useState(0);
   const [lockStatus, setLockStatus] = useState<"clear" | "locked" | "review">("clear");
   const [computedHash, setComputedHash] = useState("");
   const [registeredHash, setRegisteredHash] = useState(registeredDocumentHash);
   const [fileName, setFileName] = useState("");
   const [hashBusy, setHashBusy] = useState(false);
+  const [forensicScenario, setForensicScenario] = useState<DemoScenario>("corrupted");
   const [deedCreated, setDeedCreated] = useState(false);
   const [officerTool, setOfficerTool] = useState<"deed" | "parcel">("deed");
   const [parcelStatus, setParcelStatus] = useState<"idle" | "checking" | "created">("idle");
@@ -159,18 +175,19 @@ export default function Home() {
   const tx = (bn: string, en: string) => bilingual(language, bn, en);
   const activeItem = screenItems.find((item) => item.key === active) ?? screenItems[0];
   const visibleScreenItems = active === "officer" ? screenItems : screenItems.filter((item) => item.key !== "officer");
+  const activeDemoSteps = demoScenario === "clean" ? cleanDemoSteps : demoSteps;
   const hashMatch = Boolean(computedHash) && computedHash === registeredHash;
 
   useEffect(() => {
     if (active !== "risk") return;
     let score = 0;
     const timer = window.setInterval(() => {
-      score = Math.min(score + 5, 95);
+      score = Math.min(score + 5, demoScenario === "clean" ? 10 : 95);
       setRiskScore(score);
-      if (score === 95) window.clearInterval(timer);
+      if (score === (demoScenario === "clean" ? 10 : 95)) window.clearInterval(timer);
     }, 28);
     return () => window.clearInterval(timer);
-  }, [active]);
+  }, [active, demoScenario]);
 
   useEffect(() => {
     if (active !== "home") return;
@@ -203,10 +220,14 @@ export default function Home() {
     });
   }
 
-  function startDemo() {
+  function startDemo(scenario: DemoScenario = demoScenario) {
+    const steps = scenario === "clean" ? cleanDemoSteps : demoSteps;
+    setDemoScenario(scenario);
     setDemoStep(0);
     setSearched(true);
-    goTo(demoSteps[0].screen);
+    setQuery(scenario === "clean" ? "Parcel 208" : "Parcel 105");
+    setLockStatus(scenario === "clean" ? "clear" : "locked");
+    goTo(steps[0].screen);
   }
 
   function nextDemo() {
@@ -214,15 +235,17 @@ export default function Home() {
       startDemo();
       return;
     }
-    if (demoStep === demoSteps.length - 1) {
+    const steps = demoScenario === "clean" ? cleanDemoSteps : demoSteps;
+    if (demoStep === steps.length - 1) {
       setDemoStep(-1);
       goTo("home");
       return;
     }
     const next = demoStep + 1;
     setDemoStep(next);
-    if (next === 3) setLockStatus("locked");
-    goTo(demoSteps[next].screen);
+    if (demoScenario === "corrupted" && next === 3) setLockStatus("locked");
+    if (demoScenario === "corrupted" && next === 4) setLockStatus("review");
+    goTo(steps[next].screen);
   }
 
   async function digestBytes(bytes: ArrayBuffer) {
@@ -237,7 +260,13 @@ export default function Home() {
     setFileName(file.name);
     const hash = await digestBytes(await file.arrayBuffer());
     setComputedHash(hash);
+    setRegisteredHash(forensicScenario === "clean" ? hash : registeredDocumentHash);
     setHashBusy(false);
+  }
+
+  function chooseForensicScenario(scenario: DemoScenario) {
+    setForensicScenario(scenario);
+    if (computedHash) setRegisteredHash(scenario === "clean" ? computedHash : registeredDocumentHash);
   }
 
   async function loadDemoDocument() {
@@ -246,6 +275,7 @@ export default function Home() {
     const hash = await digestBytes(bytes.buffer);
     setRegisteredHash(hash);
     setComputedHash(hash);
+    setForensicScenario("clean");
     setFileName("DEED-2026-00105_demo.pdf");
     setHashBusy(false);
   }
@@ -269,8 +299,8 @@ export default function Home() {
       addEvent({
         id: "EVT-P0106",
         time: new Date().toLocaleTimeString("en-GB", { hour12: false }),
-        titleBn: "Synthetic canonical Parcel ID তৈরি হয়েছে",
-        titleEn: "Synthetic canonical Parcel ID created",
+        titleBn: "Synthetic official Parcel ID তৈরি হয়েছে",
+        titleEn: "Synthetic official Parcel ID created",
         actor: "Authorized Officer Console",
         hash: "4ab1…c906",
         tone: "green",
@@ -302,6 +332,19 @@ export default function Home() {
           <p>{description}</p>
         </div>
         <div className="case-chip"><span /> {tx("সক্রিয় কেস", "Active case")}: <strong>Parcel 105</strong></div>
+      </div>
+    );
+  }
+
+  function CitizenScreen() {
+    const citizenItems = visibleScreenItems.filter((item) => !["home", "citizen", "officer", "review", "ledger"].includes(item.key));
+    return (
+      <div className="screen-enter" key={active}>
+        <PageHeading eyebrow={tx("জনগণের জন্য ভূমি সেবা", "LAND SERVICES FOR CITIZENS")} title={tx("নাগরিক সেবায় কী সুবিধা পাবেন?", "What does Citizen Services solve?")} description={tx("জমি কেনা, উত্তরাধিকার বা দলিল যাচাইয়ের আগে সহজ ভাষায় record, ঝুঁকি ও পরবর্তী করণীয় বুঝে নিন।", "Before buying, inheriting or verifying land, understand the records, risks and next step in plain language.")} />
+        <div className="citizen-hero"><div className="citizen-hero-mark"><ShieldCheck size={28} /></div><div><p className="eyebrow">{tx("সহজ, নিরাপদ, ব্যাখ্যাযোগ্য", "SIMPLE, SAFE, EXPLAINABLE")}</p><h2>{tx("জমি নিয়ে অনিশ্চয়তা কমান", "Reduce uncertainty before a land transaction")}</h2><p>{tx("একই জমি একাধিকবার বিক্রি, রেজিস্ট্রি ও নামজারির অমিল, নথির পরিবর্তন এবং ভুল তথ্য—এই সমস্যাগুলো আগে থেকেই বোঝার জন্য LandTrust BD আপনাকে ধাপে ধাপে সাহায্য করে।", "LandTrust BD helps you understand double-selling, registry–mutation mismatch, altered documents and inconsistent information before they become a bigger problem.")}</p></div></div>
+        <div className="citizen-benefit-grid"><article><span>১</span><div><b>{tx("কেনার আগে যাচাই", "Verify before buying")}</b><p>{tx("Parcel ID বা Deed ID দিয়ে আগের transfer ও record মিলিয়ে দেখুন।", "Check prior transfers and records with a Parcel ID or Deed ID.")}</p></div></article><article><span>২</span><div><b>{tx("ঝুঁকির কারণ বুঝুন", "Understand the risk")}</b><p>{tx("শুধু score নয়—কোন record-এ কী অমিল, তা সহজ ভাষায় দেখুন।", "See which record conflicts and why, not just a score.")}</p></div></article><article><span>৩</span><div><b>{tx("পরবর্তী পদক্ষেপ জানুন", "Know the next step")}</b><p>{tx("কখন কর্মকর্তা review দরকার এবং কখন স্বাভাবিক processing চলবে, তা বুঝুন।", "Know when officer review is needed and when normal processing can continue.")}</p></div></article></div>
+        <section className="citizen-paths"><div className="section-heading"><div><p className="eyebrow">{tx("সেবা বেছে নিন", "CHOOSE A SERVICE")}</p><h2>{tx("কোন verification দিয়ে শুরু করবেন?", "Where would you like to start?")}</h2></div><p>{tx("নিচের যেকোনো সেবা বেছে নিলে একই sidebar integration-এ নিয়ে যাবে।", "Choose any service below to continue into the same sidebar integration.")}</p></div><div className="citizen-path-grid">{citizenItems.map((item, index) => <button key={item.key} className="citizen-path" style={{ "--delay": `${index * 65}ms` } as React.CSSProperties} onClick={() => goTo(item.key)}><span><ScreenGlyph icon={item.icon} size={19} /></span><b>{language === "bn" ? item.bn : item.en}</b><small>{language === "bn" ? item.shortBn : item.shortEn}</small><ArrowRight size={15} /></button>)}</div></section>
+        <div className="notice info"><span>i</span><p>{tx("সব তথ্য synthetic prototype-এর; কোনো বাস্তব NID, ফোন নম্বর বা সরকারি record এখানে ব্যবহার করা হয়নি।", "All data is synthetic prototype data; no real NID, phone number or government record is used here.")}</p></div>
       </div>
     );
   }
@@ -345,10 +388,18 @@ export default function Home() {
           <div><span className="journey-number">৩</span><span><b>{tx("সহজ ফলাফল পান", "Get a clear result")}</b><small>{tx("ঝুঁকি, কারণ ও পরবর্তী করণীয়", "Risk, reasons and next step")}</small></span></div>
         </section>
 
+        <section className="scenario-section">
+          <div className="section-heading"><div><p className="eyebrow">{tx("দুটি demo case", "TWO DEMO CASES")}</p><h2>{tx("দুই ধরনের ফলাফল দেখুন", "See both possible outcomes")}</h2></div><p>{tx("একটি ঝুঁকিপূর্ণ record কীভাবে review-এ যায় এবং একটি পরিষ্কার record কীভাবে স্বাভাবিক processing-এ থাকে—দুটিই দেখানো যাবে।", "Show how a risky record goes to review while a clean record continues to normal processing.")}</p></div>
+          <div className="scenario-grid">
+            <button className="scenario-card corrupted" onClick={() => startDemo("corrupted")}><span className="scenario-icon">!</span><span><b>{tx("সমস্যাযুক্ত parcel / দলিল", "Corrupted parcel / deed")}</b><small>{tx("অমিল, দ্বৈত বিক্রয় ও senior review", "Mismatch, double sale and senior review")}</small></span><ArrowUpRight size={16} /></button>
+            <button className="scenario-card clean" onClick={() => startDemo("clean")}><span className="scenario-icon">✓</span><span><b>{tx("পরিষ্কার parcel / দলিল", "Clean parcel / deed")}</b><small>{tx("সব record মিলে গেলে low-risk ফলাফল", "Low-risk result when records agree")}</small></span><ArrowUpRight size={16} /></button>
+          </div>
+        </section>
+
         <section className="services-section">
           <div className="section-heading"><div><p className="eyebrow">{tx("আপনার প্রয়োজন বেছে নিন", "CHOOSE A SERVICE")}</p><h2>{tx("আপনি কোন কাজটি করতে চান?", "What would you like to do?")}</h2></div><p>{tx("প্রতিটি সেবায় ধাপে ধাপে নির্দেশনা আছে। ভুল হলেও আগের ধাপে ফিরে যেতে পারবেন।", "Every service provides step-by-step guidance, and you can always go back.")}</p></div>
           <div className="service-grid">
-            {visibleScreenItems.slice(1).map((item, index) => (
+            {visibleScreenItems.slice(1).filter((item) => item.key !== "citizen").map((item, index) => (
               <button key={item.key} className="service-card" style={{ "--delay": `${index * 55}ms` } as React.CSSProperties} onClick={() => goTo(item.key)}>
                 <span className="service-icon"><ScreenGlyph icon={item.icon} size={20} /></span><span><b>{language === "bn" ? item.bn : item.en}</b><small>{language === "bn" ? item.shortBn : item.shortEn}</small></span><ArrowUpRight className="service-arrow" size={16} />
               </button>
@@ -360,6 +411,7 @@ export default function Home() {
   }
 
   function SearchScreen() {
+    const cleanCase = demoScenario === "clean";
     return (
       <div className="screen-enter" key={active}>
         <PageHeading eyebrow={tx("ধাপ ০১ · নাগরিক সেবা", "STEP 01 · CITIZEN SERVICE")} title={tx("পার্সেল ও দলিল অনুসন্ধান", "Parcel & Deed Search")} description={tx("Parcel identifier অথবা synthetic deed ID দিয়ে একীভূত যাচাই শুরু করুন।", "Start a unified verification with a parcel identifier or synthetic deed ID.")} />
@@ -373,10 +425,10 @@ export default function Home() {
           <div className="example-row"><span>{tx("উদাহরণ", "Try")}</span><button type="button" onClick={() => setQuery("Parcel 105")}>Parcel 105</button><button type="button" onClick={() => setQuery("DEED-2026-00105")}>DEED-2026-00105</button></div>
         </form>
         {searched && <div className="result-card reveal">
-          <div className="result-top"><div className="success-mark">✓</div><div><p className="eyebrow">{tx("SYNTHETIC RECORD FOUND", "SYNTHETIC RECORD FOUND")}</p><h2>Parcel 105</h2><p>{tx("সাভার মডেল জোন · ঢাকা · Demo Mouza 07", "Savar Model Zone · Dhaka · Demo Mouza 07")}</p></div><span className="risk-pill high">{tx("উচ্চ ঝুঁকি", "HIGH RISK")}</span></div>
-          <div className="record-grid"><div><span>{tx("দলিল ID", "Deed ID")}</span><b>DEED-2026-00105</b></div><div><span>{tx("খতিয়ান", "Khatian")}</span><b>RS-4405</b></div><div><span>{tx("জমির পরিমাণ", "Land area")}</span><b>12.50 {tx("শতক", "decimal")}</b></div><div><span>{tx("বর্তমান অবস্থা", "Current status")}</span><b className="red-text">{tx("পর্যালোচনা প্রয়োজন", "Review required")}</b></div></div>
+          <div className="result-top"><div className="success-mark">✓</div><div><p className="eyebrow">{tx("SYNTHETIC RECORD FOUND", "SYNTHETIC RECORD FOUND")}</p><h2>{cleanCase ? "Parcel 208" : "Parcel 105"}</h2><p>{tx("সাভার মডেল জোন · ঢাকা · Demo Mouza 07", "Savar Model Zone · Dhaka · Demo Mouza 07")}</p></div><span className={`risk-pill ${cleanCase ? "low" : "high"}`}>{cleanCase ? tx("নিম্ন ঝুঁকি", "LOW RISK") : tx("উচ্চ ঝুঁকি", "HIGH RISK")}</span></div>
+          <div className="record-grid"><div><span>{tx("দলিল ID", "Deed ID")}</span><b>{cleanCase ? "DEED-2026-00208" : "DEED-2026-00105"}</b></div><div><span>{tx("খতিয়ান", "Khatian")}</span><b>{cleanCase ? "RS-5208" : "RS-4405"}</b></div><div><span>{tx("জমির পরিমাণ", "Land area")}</span><b>12.50 {tx("শতক", "decimal")}</b></div><div><span>{tx("বর্তমান অবস্থা", "Current status")}</span><b className={cleanCase ? "green-text" : "red-text"}>{cleanCase ? tx("নিয়মিত processing", "Normal processing") : tx("পর্যালোচনা প্রয়োজন", "Review required")}</b></div></div>
           <div className="pipeline">
-            {[tx("ইনপুট", "Input"), tx("স্বাভাবিকীকরণ", "Normalize"), "SHA-256", tx("রেকর্ড মিল", "Cross-match"), tx("ঝুঁকি বিশ্লেষণ", "Risk")].map((label, index) => <div className="pipe-step" key={label} style={{ "--delay": `${index * 160}ms` } as React.CSSProperties}><span>{index < 4 ? "✓" : "!"}</span><small>{label}</small></div>)}
+            {[tx("ইনপুট", "Input"), tx("স্বাভাবিকীকরণ", "Normalize"), "SHA-256", tx("রেকর্ড মিল", "Cross-match"), tx("ঝুঁকি বিশ্লেষণ", "Risk")].map((label, index) => <div className="pipe-step" key={label} style={{ "--delay": `${index * 160}ms` } as React.CSSProperties}><span>{index < 4 || cleanCase ? "✓" : "!"}</span><small>{label}</small></div>)}
           </div>
           <button className="btn primary next-action" onClick={() => goTo("comparison")}>{tx("রেকর্ড তুলনা দেখুন", "View record comparison")} <span>→</span></button>
         </div>}
@@ -385,19 +437,20 @@ export default function Home() {
   }
 
   function ComparisonScreen() {
+    const cleanCase = demoScenario === "clean";
     return (
       <div className="screen-enter" key={active}>
         <PageHeading eyebrow={tx("ধাপ ০২ · রেকর্ড সমন্বয়", "STEP 02 · RECORD RECONCILIATION")} title={tx("রেজিস্ট্রি ও নামজারি রেকর্ড তুলনা", "Registry & Mutation Comparison")} description={tx("একই parcel-এর দুই উৎস পাশাপাশি দেখে অমিলটি ব্যাখ্যা করা হচ্ছে।", "Two sources for the same parcel are compared side-by-side with an explanation of every mismatch.")} />
         <div className="comparison-layout">
-          <article className="record-source registry slide-left"><div className="source-header"><div className="source-icon">R</div><div><span>{tx("সাব-রেজিস্ট্রি রেকর্ড", "SUB-REGISTRY RECORD")}</span><h3>{tx("নিবন্ধিত দলিল", "Registered deed")}</h3></div><i className="verified">✓ {tx("যাচাইকৃত", "Verified")}</i></div>
-            <dl><div><dt>{tx("দলিল নং", "Deed no.")}</dt><dd>DEED-2026-00105</dd></div><div><dt>{tx("গ্রহীতা / মালিক", "Buyer / owner")}</dt><dd className="highlight-ok">Karim-REF-22</dd></div><div><dt>{tx("বিক্রেতা", "Seller")}</dt><dd>Rahim-REF-08</dd></div><div><dt>{tx("নিবন্ধনের তারিখ", "Registration date")}</dt><dd>12 Oct 2026</dd></div><div><dt>{tx("জমির পরিমাণ", "Land area")}</dt><dd>12.50 {tx("শতক", "decimal")}</dd></div></dl>
+            <article className="record-source registry slide-left"><div className="source-header"><div className="source-icon">R</div><div><span>{tx("সাব-রেজিস্ট্রি রেকর্ড", "SUB-REGISTRY RECORD")}</span><h3>{tx("নিবন্ধিত দলিল", "Registered deed")}</h3></div><i className="verified">✓ {tx("যাচাইকৃত", "Verified")}</i></div>
+            <dl><div><dt>{tx("দলিল নং", "Deed no.")}</dt><dd>{cleanCase ? "DEED-2026-00208" : "DEED-2026-00105"}</dd></div><div><dt>{tx("গ্রহীতা / মালিক", "Buyer / owner")}</dt><dd className="highlight-ok">Karim-REF-22</dd></div><div><dt>{tx("বিক্রেতা", "Seller")}</dt><dd>Rahim-REF-08</dd></div><div><dt>{tx("নিবন্ধনের তারিখ", "Registration date")}</dt><dd>12 Oct 2026</dd></div><div><dt>{tx("জমির পরিমাণ", "Land area")}</dt><dd>12.50 {tx("শতক", "decimal")}</dd></div></dl>
           </article>
-          <div className="mismatch-core"><span>≠</span><b>{tx("মালিকানা অমিল", "OWNER MISMATCH")}</b><small>{tx("২টি field conflict", "2 conflicting fields")}</small></div>
-          <article className="record-source mutation slide-right"><div className="source-header"><div className="source-icon">M</div><div><span>{tx("নামজারি রেকর্ড", "MUTATION RECORD")}</span><h3>{tx("বর্তমান নামজারি", "Current mutation")}</h3></div><i className="stale">! {tx("পুরোনো", "Stale")}</i></div>
-            <dl><div><dt>{tx("কেস নং", "Case no.")}</dt><dd>MUT-2025-7781</dd></div><div><dt>{tx("নামজারি মালিক", "Mutation owner")}</dt><dd className="highlight-bad">Rahim-REF-08</dd></div><div><dt>{tx("সর্বশেষ হালনাগাদ", "Last updated")}</dt><dd className="highlight-bad">03 Dec 2025</dd></div><div><dt>{tx("অবস্থা", "Status")}</dt><dd>{tx("নিষ্পন্ন", "Completed")}</dd></div><div><dt>{tx("জমির পরিমাণ", "Land area")}</dt><dd>12.50 {tx("শতক", "decimal")}</dd></div></dl>
+          <div className={cleanCase ? "mismatch-core match-core" : "mismatch-core"}><span>{cleanCase ? "✓" : "≠"}</span><b>{cleanCase ? tx("রেকর্ড মিলেছে", "RECORDS MATCH") : tx("মালিকানা অমিল", "OWNER MISMATCH")}</b><small>{cleanCase ? tx("সব field consistent", "All fields consistent") : tx("২টি field conflict", "2 conflicting fields")}</small></div>
+          <article className="record-source mutation slide-right"><div className="source-header"><div className="source-icon">M</div><div><span>{tx("নামজারি রেকর্ড", "MUTATION RECORD")}</span><h3>{tx("বর্তমান নামজারি", "Current mutation")}</h3></div><i className={cleanCase ? "verified" : "stale"}>{cleanCase ? "✓" : "!"} {cleanCase ? tx("সিঙ্ক হয়েছে", "Synced") : tx("পুরোনো", "Stale")}</i></div>
+            <dl><div><dt>{tx("কেস নং", "Case no.")}</dt><dd>{cleanCase ? "MUT-2026-8208" : "MUT-2025-7781"}</dd></div><div><dt>{tx("নামজারি মালিক", "Mutation owner")}</dt><dd className={cleanCase ? "highlight-ok" : "highlight-bad"}>{cleanCase ? "Karim-REF-22" : "Rahim-REF-08"}</dd></div><div><dt>{tx("সর্বশেষ হালনাগাদ", "Last updated")}</dt><dd className={cleanCase ? "highlight-ok" : "highlight-bad"}>{cleanCase ? "12 Oct 2026" : "03 Dec 2025"}</dd></div><div><dt>{tx("অবস্থা", "Status")}</dt><dd>{tx("নিষ্পন্ন", "Completed")}</dd></div><div><dt>{tx("জমির পরিমাণ", "Land area")}</dt><dd>12.50 {tx("শতক", "decimal")}</dd></div></dl>
           </article>
         </div>
-        <div className="explanation-card"><span className="explain-icon">!</span><div><p className="eyebrow">RULE-02 · OWNER_SYNC_MISMATCH</p><h3>{tx("রেজিস্ট্রিতে নতুন মালিক, কিন্তু নামজারিতে পুরোনো মালিক", "Registry shows the new owner; mutation still shows the previous owner")}</h3><p>{tx("এটি নিজে অপরাধের চূড়ান্ত প্রমাণ নয়। তবে একই parcel পুনরায় বিক্রির চেষ্টা হলে এটি গুরুত্বপূর্ণ ঝুঁকি সংকেত।", "This is not conclusive proof of fraud by itself, but it becomes a critical signal if another sale is attempted for the same parcel.")}</p></div><button className="text-button" onClick={() => goTo("timeline")}>{tx("টাইমলাইন দেখুন", "Open timeline")} →</button></div>
+        <div className={`explanation-card ${cleanCase ? "clean-explanation" : ""}`}><span className="explain-icon">{cleanCase ? "✓" : "!"}</span><div><p className="eyebrow">{cleanCase ? "OFFICIAL_RECORD_SYNC" : "RULE-02 · OWNER_SYNC_MISMATCH"}</p><h3>{cleanCase ? tx("রেজিস্ট্রি ও নামজারিতে একই মালিক", "Registry and mutation show the same owner") : tx("রেজিস্ট্রিতে নতুন মালিক, কিন্তু নামজারিতে পুরোনো মালিক", "Registry shows the new owner; mutation still shows the previous owner")}</h3><p>{cleanCase ? tx("এই demo record-এ ownership, area ও update date consistent। স্বাভাবিক processing চালানো যায়।", "Ownership, area and update date are consistent in this demo record. Normal processing can continue.") : tx("এটি নিজে অপরাধের চূড়ান্ত প্রমাণ নয়। তবে একই parcel পুনরায় বিক্রির চেষ্টা হলে এটি গুরুত্বপূর্ণ ঝুঁকি সংকেত।", "This is not conclusive proof of fraud by itself, but it becomes a critical signal if another sale is attempted for the same parcel.")}</p></div><button className="text-button" onClick={() => goTo(cleanCase ? "risk" : "timeline")}>{tx(cleanCase ? "ঝুঁকি ফলাফল দেখুন" : "টাইমলাইন দেখুন", cleanCase ? "View risk result" : "Open timeline")} →</button></div>
       </div>
     );
   }
@@ -426,20 +479,18 @@ export default function Home() {
   }
 
   function RiskScreen() {
+    const cleanCase = demoScenario === "clean";
     const ringStyle = { "--score": `${riskScore * 3.6}deg` } as React.CSSProperties;
     return (
       <div className="screen-enter" key={active}>
         <PageHeading eyebrow={tx("ধাপ ০৪ · ব্যাখ্যাযোগ্য বিশ্লেষণ", "STEP 04 · EXPLAINABLE ANALYSIS")} title={tx("জালিয়াতি ঝুঁকি বিশ্লেষণ", "Fraud Risk Analysis")} description={tx("প্রতিটি rule hit, তার ওজন ও করণীয় আলাদাভাবে দেখুন।", "See every rule hit, its weight and the recommended action.")} />
         <div className="risk-dashboard">
-          <div className="score-card critical"><div className="score-ring" style={ringStyle}><div><strong>{riskScore}</strong><span>/100</span></div></div><p className="eyebrow">{tx("সমন্বিত ঝুঁকি স্কোর", "COMPOSITE RISK SCORE")}</p><h2>{tx("অতি উচ্চ ঝুঁকি", "CRITICAL RISK")}</h2><p>{tx("স্বয়ংক্রিয় অনুমোদন বন্ধ করে কর্মকর্তার রিভিউ প্রয়োজন।", "Automatic approval is paused; officer review is required.")}</p><div className="confidence"><span>{tx("বিশ্লেষণ আস্থা", "Analysis confidence")}</span><b>98%</b><i><em /></i></div></div>
-          <div className="rules-card"><div className="card-title"><div><p className="eyebrow">{tx("নিয়মভিত্তিক ব্যাখ্যা", "RULE-BASED EXPLANATION")}</p><h3>{tx("৩টি প্রধান সংকেত শনাক্ত", "3 major signals detected")}</h3></div><span>3 / 8</span></div>
-            <div className="rule-hit red"><span className="rule-index">01</span><div><b>RULE-01 · DOUBLE_SALE_OVERLAP</b><p>{tx("একই parcel-এর পূর্ববর্তী transfer সক্রিয় থাকা অবস্থায় নতুন sale intent পাওয়া গেছে।", "A new sale intent was found while a prior transfer for the same parcel remains active.")}</p></div><strong>+55</strong></div>
-            <div className="rule-hit amber"><span className="rule-index">02</span><div><b>RULE-02 · OWNER_SYNC_MISMATCH</b><p>{tx("রেজিস্ট্রি মালিক Karim-REF-22; নামজারি মালিক Rahim-REF-08।", "Registry owner is Karim-REF-22; mutation owner is Rahim-REF-08.")}</p></div><strong>+25</strong></div>
-            <div className="rule-hit amber"><span className="rule-index">03</span><div><b>RULE-05 · SELLER_AUTHORITY_FAIL</b><p>{tx("নতুন transfer-এর seller সর্বশেষ নিবন্ধিত মালিক নন।", "The seller in the new transfer is not the latest registered owner.")}</p></div><strong>+15</strong></div>
-            <div className="formula"><span>{tx("স্কোর", "Score")}</span><code>55 + 25 + 15 = 95</code><small>{tx("Rule-based demo — ML prediction নয়", "Rule-based demo — not an ML prediction")}</small></div>
+          <div className={`score-card ${cleanCase ? "safe" : "critical"}`}><div className="score-ring" style={ringStyle}><div><strong>{riskScore}</strong><span>/100</span></div></div><p className="eyebrow">{tx("সমন্বিত ঝুঁকি স্কোর", "COMPOSITE RISK SCORE")}</p><h2>{cleanCase ? tx("নিম্ন ঝুঁকি", "LOW RISK") : tx("অতি উচ্চ ঝুঁকি", "CRITICAL RISK")}</h2><p>{cleanCase ? tx("সব প্রধান record check পাস করেছে; স্বাভাবিক processing চলতে পারে।", "All major record checks passed; normal processing can continue.") : tx("স্বয়ংক্রিয় অনুমোদন বন্ধ করে কর্মকর্তার রিভিউ প্রয়োজন।", "Automatic approval is paused; officer review is required.")}</p><div className="confidence"><span>{tx("বিশ্লেষণ আস্থা", "Analysis confidence")}</span><b>{cleanCase ? "99%" : "98%"}</b><i><em /></i></div></div>
+          <div className="rules-card"><div className="card-title"><div><p className="eyebrow">{tx("নিয়মভিত্তিক ব্যাখ্যা", "RULE-BASED EXPLANATION")}</p><h3>{cleanCase ? tx("সব প্রধান সংকেত পাস", "All major checks passed") : tx("৩টি প্রধান সংকেত শনাক্ত", "3 major signals detected")}</h3></div><span>{cleanCase ? "3 / 3" : "3 / 8"}</span></div>
+            {cleanCase ? <><div className="rule-hit green"><span className="rule-index">✓</span><div><b>RULE-01 · OFFICIAL_RECORD_MATCH</b><p>{tx("Registry ও mutation record-এ একই মালিক, area ও update তথ্য পাওয়া গেছে।", "Registry and mutation show the same owner, area and update information.")}</p></div><strong>PASS</strong></div><div className="rule-hit green"><span className="rule-index">✓</span><div><b>RULE-02 · NO_TRANSFER_OVERLAP</b><p>{tx("এই parcel-এর জন্য কোনো conflicting transfer পাওয়া যায়নি।", "No conflicting transfer was found for this parcel.")}</p></div><strong>PASS</strong></div><div className="rule-hit green"><span className="rule-index">✓</span><div><b>RULE-05 · SELLER_AUTHORITY_OK</b><p>{tx("Seller reference সর্বশেষ official owner-এর সঙ্গে মিলে গেছে।", "Seller reference matches the latest official owner.")}</p></div><strong>PASS</strong></div><div className="formula"><span>{tx("ফলাফল", "Result")}</span><code>3 checks passed = LOW RISK</code><small>{tx("Rule-based demo — ML prediction নয়", "Rule-based demo — not an ML prediction")}</small></div></> : <><div className="rule-hit red"><span className="rule-index">01</span><div><b>RULE-01 · DOUBLE_SALE_OVERLAP</b><p>{tx("একই parcel-এর পূর্ববর্তী transfer সক্রিয় থাকা অবস্থায় নতুন sale intent পাওয়া গেছে।", "A new sale intent was found while a prior transfer for the same parcel remains active.")}</p></div><strong>+55</strong></div><div className="rule-hit amber"><span className="rule-index">02</span><div><b>RULE-02 · OWNER_SYNC_MISMATCH</b><p>{tx("রেজিস্ট্রি মালিক Karim-REF-22; নামজারি মালিক Rahim-REF-08।", "Registry owner is Karim-REF-22; mutation owner is Rahim-REF-08.")}</p></div><strong>+25</strong></div><div className="rule-hit amber"><span className="rule-index">03</span><div><b>RULE-05 · SELLER_AUTHORITY_FAIL</b><p>{tx("নতুন transfer-এর seller সর্বশেষ registered owner নন।", "The seller in the new transfer is not the latest registered owner.")}</p></div><strong>+15</strong></div><div className="formula"><span>{tx("স্কোর", "Score")}</span><code>55 + 25 + 15 = 95</code><small>{tx("Rule-based demo — ML prediction নয়", "Rule-based demo — not an ML prediction")}</small></div></>}
           </div>
         </div>
-        <div className="recommended-action"><div className="shield-icon">◆</div><div><p className="eyebrow">{tx("প্রস্তাবিত সিদ্ধান্ত", "RECOMMENDED DECISION")}</p><h3>{tx("লেনদেন সাময়িকভাবে স্থগিত করুন", "Temporarily hold the transaction")}</h3><p>{tx("মূল দলিল, নামজারি case এবং বিক্রেতার বর্তমান কর্তৃত্ব কর্মকর্তা যাচাই করবেন।", "An officer should verify the original deed, mutation case and the seller’s current authority.")}</p></div><button className="btn danger-btn" onClick={() => { updateLock("locked"); goTo("lock"); }}>{tx("সাময়িক লক দিন", "Place provisional lock")} <span>▣</span></button></div>
+        <div className={`recommended-action ${cleanCase ? "safe-action" : ""}`}><div className="shield-icon">{cleanCase ? "✓" : "◆"}</div><div><p className="eyebrow">{tx("প্রস্তাবিত সিদ্ধান্ত", "RECOMMENDED DECISION")}</p><h3>{cleanCase ? tx("স্বাভাবিক processing চালিয়ে যান", "Continue normal processing") : tx("লেনদেন সাময়িকভাবে স্থগিত করুন", "Temporarily hold the transaction")}</h3><p>{cleanCase ? tx("কোনো senior review বা provisional lock প্রয়োজন নেই; ফলাফলটি receipt হিসেবে প্রকাশ করা যাবে।", "No senior review or provisional lock is needed; the result can be issued as a receipt.") : tx("মূল দলিল, নামজারি case এবং বিক্রেতার বর্তমান কর্তৃত্ব কর্মকর্তা যাচাই করবেন।", "An officer should verify the original deed, mutation case and the seller’s current authority.")}</p></div><button className={cleanCase ? "btn primary" : "btn danger-btn"} onClick={() => cleanCase ? goTo("report") : (updateLock("locked"), goTo("lock"))}>{cleanCase ? tx("পরিষ্কার প্রতিবেদন দেখুন", "View clear report") : tx("সাময়িক লক দিন", "Place provisional lock")} <span>▣</span></button></div>
       </div>
     );
   }
@@ -448,6 +499,7 @@ export default function Home() {
     return (
       <div className="screen-enter" key={active}>
         <PageHeading eyebrow={tx("প্রাতিষ্ঠানিক যাচাই", "INSTITUTIONAL VERIFICATION")} title={tx("ফরেনসিক PDF যাচাই", "Forensic PDF Verification")} description={tx("ব্রাউজারেই PDF-এর SHA-256 digest হিসাব করে নিবন্ধিত digest-এর সঙ্গে তুলনা করা হয়।", "The browser computes a PDF SHA-256 digest and compares it with the registered digest.")} />
+        <div className="forensic-scenarios"><div><b>{tx("Demo ফলাফল বেছে নিন", "Choose demo outcome")}</b><small>{tx("যেকোনো PDF দিলে নির্বাচিত scenario অনুযায়ী ফলাফল দেখাবে।", "Any PDF will receive the selected demo outcome.")}</small></div><div><button className={forensicScenario === "corrupted" ? "active danger" : ""} onClick={() => chooseForensicScenario("corrupted")}>! {tx("সমস্যাযুক্ত", "Corrupted")}</button><button className={forensicScenario === "clean" ? "active safe" : ""} onClick={() => chooseForensicScenario("clean")}>✓ {tx("পরিষ্কার", "Clean")}</button></div></div>
         <div className="forensic-grid">
           <div className="upload-card"><div className="upload-zone"><div className="upload-icon">⇧</div><h3>{tx("দলিল PDF এখানে দিন", "Drop the deed PDF here")}</h3><p>{tx("শুধু demo/synthetic নথি ব্যবহার করুন · সর্বোচ্চ ১০ MB", "Use demo/synthetic documents only · Up to 10 MB")}</p><label className="btn primary">{tx("PDF নির্বাচন করুন", "Choose PDF")}<input type="file" accept="application/pdf" onChange={handleFile} /></label><span>{tx("অথবা", "or")}</span><button className="text-button" onClick={loadDemoDocument}>{tx("নিরাপদ demo document চালান", "Load safe demo document")}</button></div>{fileName && <div className="file-row"><span>PDF</span><div><b>{fileName}</b><small>{hashBusy ? tx("Hash হিসাব হচ্ছে…", "Computing hash…") : tx("SHA-256 প্রস্তুত", "SHA-256 ready")}</small></div><i>✓</i></div>}</div>
           <div className="hash-card"><p className="eyebrow">{tx("INTEGRITY CHECK", "INTEGRITY CHECK")}</p><h3>{tx("ডকুমেন্ট fingerprint তুলনা", "Document fingerprint comparison")}</h3><div className="hash-row"><span>{tx("Computed hash", "Computed hash")}</span><code>{computedHash ? shortHash(computedHash) : "—"}</code></div><div className="hash-divider"><i /><span>{computedHash ? (hashMatch ? "=" : "≠") : "?"}</span><i /></div><div className="hash-row"><span>{tx("Registered hash", "Registered hash")}</span><code>{shortHash(registeredHash)}</code></div><div className={`hash-verdict ${computedHash ? (hashMatch ? "match" : "mismatch") : "waiting"}`}><span>{computedHash ? (hashMatch ? "✓" : "!") : "…"}</span><div><b>{computedHash ? (hashMatch ? tx("অপরিবর্তিত নথি", "Document intact") : tx("সম্ভাব্য পরিবর্তন", "Possible tampering")) : tx("নথির অপেক্ষায়", "Waiting for document")}</b><small>{computedHash ? (hashMatch ? tx("দুটি fingerprint হুবহু মিলেছে।", "Both fingerprints match exactly.") : tx("Digest না মেলায় manual review প্রয়োজন।", "Digest mismatch requires manual review.")) : tx("Upload করলে তুলনা শুরু হবে।", "Upload to start comparison.")}</small></div></div></div>
@@ -465,23 +517,23 @@ export default function Home() {
         <div className="officer-banner"><div className="avatar">MR</div><div><b>{tx("মোঃ রহমান · Demo Officer", "Md Rahman · Demo Officer")}</b><span>{tx("অনুমোদিত ভূমি রেকর্ড কর্মকর্তা · Savar Model Zone", "Authorized Land Records Officer · Savar Model Zone")}</span></div><i><BadgeCheck size={12} /> {tx("Role verified", "Role verified")}</i></div>
         <div className="officer-tool-tabs" role="tablist" aria-label={tx("কর্মকর্তার কাজ নির্বাচন", "Choose officer task")}>
           <button role="tab" aria-selected={officerTool === "deed"} className={officerTool === "deed" ? "active" : ""} onClick={() => setOfficerTool("deed")}><ScrollText size={16} /><span><b>{tx("দলিল নিবন্ধন", "Deed registration")}</b><small>{tx("Digest, signature ও QR", "Digest, signature & QR")}</small></span></button>
-          <button role="tab" aria-selected={officerTool === "parcel"} className={officerTool === "parcel" ? "active" : ""} onClick={() => setOfficerTool("parcel")}><MapPinned size={16} /><span><b>{tx("Parcel ID তৈরি", "Create Parcel ID")}</b><small>{tx("Canonical parcel profile", "Canonical parcel profile")}</small></span></button>
+          <button role="tab" aria-selected={officerTool === "parcel"} className={officerTool === "parcel" ? "active" : ""} onClick={() => setOfficerTool("parcel")}><MapPinned size={16} /><span><b>{tx("Parcel ID তৈরি", "Create Parcel ID")}</b><small>{tx("Official parcel profile", "Official parcel profile")}</small></span></button>
         </div>
-        {officerTool === "deed" ? <div className="console-grid">
+        {officerTool === "deed" ? <div key="deed-tool" className="console-grid">
           <form className="deed-form" onSubmit={(e) => { e.preventDefault(); registerDeed(); }}><div className="card-title"><div><p className="eyebrow">{tx("নতুন লেনদেনের খসড়া", "NEW TRANSACTION DRAFT")}</p><h3>{tx("Synthetic দলিলের তথ্য", "Synthetic deed details")}</h3></div><span className="step-badge">1 / 3</span></div>
             <div className="field-grid"><label><span>{tx("Parcel ID", "Parcel ID")}</span><input defaultValue="Parcel 105" /></label><label><span>{tx("দলিল ID", "Deed ID")}</span><input defaultValue="DEED-2026-00105-B" /></label><label><span>{tx("বিক্রেতার reference", "Seller reference")}</span><input defaultValue="Rahim-REF-08" /></label><label><span>{tx("ক্রেতার reference", "Buyer reference")}</span><input defaultValue="Sakib-REF-31" /></label><label><span>{tx("জমির পরিমাণ", "Land area")}</span><input defaultValue="12.50 decimal" /></label><label><span>{tx("লেনদেনের ধরন", "Transaction type")}</span><select defaultValue="sale"><option value="sale">{tx("বিক্রয়", "Sale")}</option></select></label></div>
             <label className="consent"><input type="checkbox" defaultChecked /><span><b>{tx("এটি কেবল synthetic demo transaction", "This is a synthetic demo transaction")}</b><small>{tx("এখানে কোনো বাস্তব NID, নাম বা সরকারি রেকর্ড নেই।", "No real NID, identity or government record is used.")}</small></span></label>
             <button className="btn primary full">{tx("Digest, signature ও QR তৈরি করুন", "Generate digest, signature & QR")} <span>→</span></button>
           </form>
-          <div className={`signature-panel ${deedCreated ? "signed" : ""}`}><div className="seal"><span>{deedCreated ? "✓" : "◆"}</span><i /></div><p className="eyebrow">{tx("CRYPTOGRAPHIC SEAL", "CRYPTOGRAPHIC SEAL")}</p><h3>{deedCreated ? tx("Demo signature প্রস্তুত", "Demo signature ready") : tx("স্বাক্ষরের অপেক্ষায়", "Awaiting signature")}</h3><p>{tx("Canonical metadata থেকে hash তৈরি করে demo officer key-এর signature দেখানো হবে।", "A hash of canonical metadata will be shown with a simulated officer-key signature.")}</p><dl><div><dt>Document digest</dt><dd>{deedCreated ? "c401…8fd2" : "—"}</dd></div><div><dt>Signature</dt><dd>{deedCreated ? "0x98bd…23ea" : "—"}</dd></div><div><dt>Audit anchor</dt><dd>{deedCreated ? "SIM-BLOCK-0091" : "—"}</dd></div></dl>{deedCreated && <button className="text-button" onClick={() => goTo("report")}>{tx("QR রসিদ দেখুন", "View QR receipt")} →</button>}</div>
-        </div> : <div className="console-grid parcel-console">
-          <form className="deed-form parcel-form" onSubmit={createParcel}><div className="card-title"><div><p className="eyebrow">{tx("CANONICAL PARCEL ONBOARDING", "CANONICAL PARCEL ONBOARDING")}</p><h3>{tx("নতুন Parcel ID-এর তথ্য", "New Parcel ID details")}</h3></div><span className="step-badge">1 / 3</span></div>
+            <div className={`signature-panel ${deedCreated ? "signed" : ""}`}><div className="seal"><span>{deedCreated ? "✓" : "◆"}</span><i /></div><p className="eyebrow">{tx("CRYPTOGRAPHIC SEAL", "CRYPTOGRAPHIC SEAL")}</p><h3>{deedCreated ? tx("Demo signature প্রস্তুত", "Demo signature ready") : tx("স্বাক্ষরের অপেক্ষায়", "Awaiting signature")}</h3><p>{tx("Official metadata থেকে hash তৈরি করে demo officer key-এর signature দেখানো হবে।", "A hash of official metadata will be shown with a simulated officer-key signature.")}</p><dl><div><dt>Document digest</dt><dd>{deedCreated ? "c401…8fd2" : "—"}</dd></div><div><dt>Signature</dt><dd>{deedCreated ? "0x98bd…23ea" : "—"}</dd></div><div><dt>Audit anchor</dt><dd>{deedCreated ? "SIM-BLOCK-0091" : "—"}</dd></div></dl>{deedCreated && <button className="text-button" onClick={() => goTo("report")}>{tx("QR রসিদ দেখুন", "View QR receipt")} →</button>}</div>
+        </div> : <div key="parcel-tool" className="console-grid parcel-console">
+          <form className="deed-form parcel-form" onSubmit={createParcel}><div className="card-title"><div><p className="eyebrow">{tx("OFFICIAL PARCEL ONBOARDING", "OFFICIAL PARCEL ONBOARDING")}</p><h3>{tx("নতুন Parcel ID-এর তথ্য", "New Parcel ID details")}</h3></div><span className="step-badge">1 / 3</span></div>
             <div className="field-grid"><label><span>{tx("জেলা", "District")}</span><input defaultValue={tx("ঢাকা", "Dhaka")} /></label><label><span>{tx("উপজেলা", "Upazila")}</span><input defaultValue={tx("সাভার", "Savar")} /></label><label><span>{tx("মৌজা", "Mouza")}</span><input defaultValue={tx("মডেল মৌজা ০৫", "Model Mouza 05")} /></label><label><span>JL Number</span><input defaultValue="JL-057" /></label><label><span>{tx("খতিয়ান নম্বর", "Khatian number")}</span><input defaultValue="KH-2048" /></label><label><span>{tx("দাগ / Plot নম্বর", "Dag / Plot number")}</span><input defaultValue="DG-0106" /></label><label><span>{tx("জমির পরিমাণ", "Land area")}</span><input defaultValue="18.25 decimal" /></label><label><span>{tx("রেকর্ড উৎস", "Record source")}</span><select defaultValue="survey"><option value="survey">{tx("Synthetic survey record", "Synthetic survey record")}</option></select></label></div>
             <div className="parcel-steps"><span className="done">1<small>{tx("তথ্য পূরণ", "Enter data")}</small></span><i /><span className={parcelStatus !== "idle" ? "done" : ""}>2<small>{tx("Duplicate পরীক্ষা", "Duplicate check")}</small></span><i /><span className={parcelStatus === "created" ? "done" : ""}>3<small>{tx("ID তৈরি", "Create ID")}</small></span></div>
-            <label className="consent"><input type="checkbox" defaultChecked /><span><b>{tx("শুধু synthetic parcel record", "Synthetic parcel record only")}</b><small>{tx("এটি সরকারি Dag/Khatian নম্বর পরিবর্তন করে না; শুধু LandTrust canonical reference তৈরি করে।", "This does not alter official Dag/Khatian numbers; it creates only a LandTrust canonical reference.")}</small></span></label>
+            <label className="consent"><input type="checkbox" defaultChecked /><span><b>{tx("শুধু synthetic parcel record", "Synthetic parcel record only")}</b><small>{tx("এটি সরকারি Dag/Khatian নম্বর পরিবর্তন করে না; শুধু LandTrust official reference তৈরি করে।", "This does not alter official Dag/Khatian numbers; it creates only a LandTrust official reference.")}</small></span></label>
             <button className="btn primary full" disabled={parcelStatus !== "idle"}>{parcelStatus === "checking" ? tx("Duplicate record পরীক্ষা চলছে…", "Checking for duplicate records…") : parcelStatus === "created" ? tx("Parcel ID তৈরি হয়েছে", "Parcel ID created") : tx("Duplicate পরীক্ষা করে Parcel ID তৈরি করুন", "Check duplicates and create Parcel ID")} <span>→</span></button>
           </form>
-          <div className={`signature-panel parcel-preview ${parcelStatus}`}><div className="parcel-id-mark">{parcelStatus === "created" ? <BadgeCheck size={33} /> : <MapPinned size={33} />}</div><p className="eyebrow">{tx("GENERATED CANONICAL ID", "GENERATED CANONICAL ID")}</p><h3>{parcelStatus === "created" ? "LTB-DHK-SAV-M05-P0106" : parcelStatus === "checking" ? tx("Record পরীক্ষা চলছে", "Checking records") : tx("Parcel ID preview", "Parcel ID preview")}</h3><p>{parcelStatus === "created" ? tx("অনুমোদিত কর্মকর্তা synthetic parcel profile তৈরি করেছেন। এটি audit ledger-এ নথিভুক্ত হয়েছে।", "An authorized officer created the synthetic parcel profile, and the event was recorded in the audit ledger.") : tx("Mouza, JL, Khatian ও Dag-এর unique combination যাচাইয়ের পর ID তৈরি হবে।", "The ID will be created after validating the unique Mouza, JL, Khatian and Dag combination.")}</p><dl><div><dt>{tx("অবস্থা", "Status")}</dt><dd>{parcelStatus === "created" ? "ACTIVE" : parcelStatus === "checking" ? "VALIDATING" : "DRAFT"}</dd></div><div><dt>{tx("তৈরিকারী ভূমিকা", "Creator role")}</dt><dd>LAND_RECORD_OFFICER</dd></div><div><dt>Audit hash</dt><dd>{parcelStatus === "created" ? "4ab1…c906" : "—"}</dd></div></dl>{parcelStatus === "created" && <button className="text-button" onClick={() => setParcelStatus("idle")}>{tx("আরেকটি parcel entry তৈরি করুন", "Create another parcel entry")} →</button>}</div>
+          <div className={`signature-panel parcel-preview ${parcelStatus}`}><div className="parcel-id-mark">{parcelStatus === "created" ? <BadgeCheck size={33} /> : <MapPinned size={33} />}</div><p className="eyebrow">{tx("GENERATED OFFICIAL ID", "GENERATED OFFICIAL ID")}</p><h3>{parcelStatus === "created" ? "LTB-DHK-SAV-M05-P0106" : parcelStatus === "checking" ? tx("Record পরীক্ষা চলছে", "Checking records") : tx("Parcel ID preview", "Parcel ID preview")}</h3><p>{parcelStatus === "created" ? tx("অনুমোদিত কর্মকর্তা synthetic parcel profile তৈরি করেছেন। এটি audit ledger-এ নথিভুক্ত হয়েছে।", "An authorized officer created the synthetic parcel profile, and the event was recorded in the audit ledger.") : tx("Mouza, JL, Khatian ও Dag-এর unique combination যাচাইয়ের পর ID তৈরি হবে।", "The ID will be created after validating the unique Mouza, JL, Khatian and Dag combination.")}</p><dl><div><dt>{tx("অবস্থা", "Status")}</dt><dd>{parcelStatus === "created" ? "ACTIVE" : parcelStatus === "checking" ? "VALIDATING" : "DRAFT"}</dd></div><div><dt>{tx("তৈরিকারী ভূমিকা", "Creator role")}</dt><dd>LAND_RECORD_OFFICER</dd></div><div><dt>Audit hash</dt><dd>{parcelStatus === "created" ? "4ab1…c906" : "—"}</dd></div></dl>{parcelStatus === "created" && <button className="text-button" onClick={() => setParcelStatus("idle")}>{tx("আরেকটি parcel entry তৈরি করুন", "Create another parcel entry")} →</button>}</div>
         </div>}
       </div>
     );
@@ -499,20 +551,32 @@ export default function Home() {
           [tx("নামজারি case status যাচাই", "Review mutation case status"), false],
           [tx("উভয় পক্ষের বক্তব্য নথিভুক্ত", "Record statements from both parties"), false],
         ].map(([label, done], index) => <div className={`check-row ${done ? "done" : ""}`} key={String(label)}><span>{done ? "✓" : index + 1}</span><b>{label}</b><small>{done ? tx("সম্পন্ন", "Done") : tx("অপেক্ষমাণ", "Pending")}</small></div>)}</div>
-          <div className="decision-card"><p className="eyebrow">{tx("ADMINISTRATIVE ACTION", "ADMINISTRATIVE ACTION")}</p><h3>{tx("সিদ্ধান্ত নির্বাচন করুন", "Choose a decision")}</h3><p>{tx("প্রতিটি action audit ledger-এ actor, time ও hash সহ যোগ হবে।", "Every action is added to the audit ledger with actor, time and hash.")}</p><button className="btn danger-btn full" onClick={() => updateLock("locked")}>▣ {tx("সাময়িক লক সক্রিয়", "Activate provisional lock")}</button><button className="btn secondary full" onClick={() => updateLock("review")}>↗ {tx("ঊর্ধ্বতন রিভিউতে পাঠান", "Escalate for senior review")}</button><button className="btn ghost full" onClick={() => updateLock("clear")}>✓ {tx("যাচাই শেষে লক ছাড়ুন", "Release after verification")}</button><small className="simulation-note">{tx("Prototype simulation — কোনো সরকারি রেকর্ড পরিবর্তিত হয় না", "Prototype simulation — no government record is changed")}</small></div>
+          <div className="decision-card"><p className="eyebrow">{tx("ADMINISTRATIVE ACTION", "ADMINISTRATIVE ACTION")}</p><h3>{tx("সিদ্ধান্ত নির্বাচন করুন", "Choose a decision")}</h3><p>{tx("প্রতিটি action audit ledger-এ actor, time ও hash সহ যোগ হবে।", "Every action is added to the audit ledger with actor, time and hash.")}</p><button className="btn danger-btn full" onClick={() => updateLock("locked")}>▣ {tx("সাময়িক লক সক্রিয়", "Activate provisional lock")}</button><button className="btn secondary full" onClick={() => { updateLock("review"); goTo("review"); }}>↗ {tx("ঊর্ধ্বতন রিভিউতে পাঠান", "Escalate for senior review")}</button><button className="btn ghost full" onClick={() => updateLock("clear")}>✓ {tx("যাচাই শেষে লক ছাড়ুন", "Release after verification")}</button><small className="simulation-note">{tx("Prototype simulation — কোনো সরকারি রেকর্ড পরিবর্তিত হয় না", "Prototype simulation — no government record is changed")}</small></div>
         </div>
       </div>
     );
   }
 
+  function SeniorReviewScreen() {
+    return (
+      <div className="screen-enter" key={active}>
+        <PageHeading eyebrow={tx("ধাপ ০৫ · প্রশাসনিক ব্যবস্থাপনা", "STEP 05 · ADMINISTRATIVE HANDLING")} title={tx("ঊর্ধ্বতন কর্মকর্তার পর্যালোচনা", "Senior Officer Review")} description={tx("ঝুঁকিপূর্ণ ফলাফল সরাসরি legal verdict নয়; প্রমাণ, নোটিশ, শুনানি ও দায়িত্বপ্রাপ্ত কর্তৃপক্ষের সিদ্ধান্তের জন্য case পাঠানো হয়।", "A risk result is not a legal verdict; the case is routed for evidence review, notice, hearing and a decision by the responsible authority.")} />
+        <div className="senior-review-hero"><div className="senior-review-icon"><ShieldAlert size={24} /></div><div><p className="eyebrow">ESCALATED CASE · PARCEL 105</p><h2>{tx("Final registration সাময়িকভাবে আটকে আছে", "Final registration is provisionally paused")}</h2><p>{tx("কর্মকর্তা record মিল, মূল দলিল, নামজারি status ও সংশ্লিষ্ট পক্ষের বক্তব্য যাচাই না করা পর্যন্ত নতুন transfer final হবে না।", "A new transfer is not finalized until the officer reviews record matches, the original deed, mutation status and statements from concerned parties.")}</p></div><span className="review-status">{tx("রিভিউ চলমান", "IN REVIEW")}</span></div>
+        <div className="senior-review-grid"><article className="senior-flow"><div className="card-title"><div><p className="eyebrow">{tx("উর্ধ্বতন কর্মকর্তার workflow", "SENIOR OFFICER WORKFLOW")}</p><h3>{tx("কীভাবে case handle হবে", "How the case is handled")}</h3></div><span>4 steps</span></div><div className="senior-step"><span>1</span><div><b>{tx("Referral গ্রহণ ও provisional hold", "Accept referral and keep the provisional hold")}</b><small>{tx("Audit hash, risk reasons ও source records সংরক্ষণ করা হয়।", "Preserve the audit hash, risk reasons and source records.")}</small></div></div><div className="senior-step"><span>2</span><div><b>{tx("Official record ও মূল দলিল যাচাই", "Verify official records and original deed")}</b><small>{tx("নামজারি case, খতিয়ান, দাগ, দলিল ও seller authority মিলিয়ে দেখা হয়।", "Check mutation case, khatian, dag, deed and seller authority.")}</small></div></div><div className="senior-step"><span>3</span><div><b>{tx("নোটিশ / শুনানির জন্য পাঠানো", "Send for notice / hearing")}</b><small>{tx("প্রয়োজন হলে আবেদনকারী ও সংশ্লিষ্ট পক্ষের বক্তব্য নেওয়া হয়।", "Where required, obtain statements from the applicant and concerned parties.")}</small></div></div><div className="senior-step"><span>4</span><div><b>{tx("কারণসহ প্রশাসনিক সিদ্ধান্ত নথিভুক্ত", "Record a reasoned administrative decision")}</b><small>{tx("লক রাখা, release করা বা উপযুক্ত কর্তৃপক্ষের কাছে পাঠানো—কারণসহ ledger-এ লেখা হয়।", "Keep the hold, release it or refer to the competent authority with reasons in the ledger.")}</small></div></div></article><aside className="senior-decision"><p className="eyebrow">{tx("SENIOR DECISION", "SENIOR DECISION")}</p><h3>{tx("পরবর্তী ব্যবস্থা", "Next action")}</h3><p>{tx("এটি prototype-এর administrative simulation; কোনো আদালত বা সরকারি final order নয়।", "This is an administrative simulation, not a court judgment or final government order.")}</p><button className="btn danger-btn full" onClick={() => updateLock("locked")}>{tx("Hold বজায় রাখুন", "Keep hold")}</button><button className="btn secondary full" onClick={() => updateLock("review")}>{tx("উপযুক্ত কর্তৃপক্ষের কাছে পাঠান", "Refer to competent authority")}</button><button className="btn ghost full" onClick={() => { updateLock("clear"); goTo("report"); }}>{tx("যাচাই শেষে release করুন", "Release after verification")}</button></aside></div>
+        <div className="notice info"><span>i</span><p>{tx("বাংলাদেশের e-Mutation workflow-এর মতো investigation, শুনানি ও decision ধাপ এখানে conceptually দেখানো হয়েছে। বাস্তব case-এ প্রযোজ্য আইন, jurisdiction ও সরকারি SOP অনুসরণ করতে হবে।", "This concept mirrors the investigation, hearing and decision stages used in Bangladesh’s e-Mutation workflow. A real case must follow applicable law, jurisdiction and government SOPs.")}</p></div>
+      </div>
+    );
+  }
+
   function ReportScreen() {
+    const cleanCase = demoScenario === "clean";
     return (
       <div className="screen-enter" key={active}>
         <PageHeading eyebrow={tx("জনসাধারণের যাচাই", "PUBLIC VERIFICATION")} title={tx("QR যাচাই প্রতিবেদন", "QR Verification Report")} description={tx("Verification ID, বর্তমান status ও tamper-evident audit hash সহ printable receipt।", "A printable receipt with verification ID, current status and a tamper-evident audit hash.")} />
         <div className="receipt-wrap">
           <article className="receipt" id="verification-receipt"><div className="receipt-header"><div className="receipt-brand"><LogoMark compact /><div><b>LandTrust BD</b><span>{tx("ভূমি লেনদেন যাচাই সেবা", "Land transaction verification service")}</span></div></div><span className="prototype-stamp">SYNTHETIC PROTOTYPE</span></div>
-            <div className="receipt-status"><div className="status-shield">!</div><div><p>{tx("যাচাইয়ের ফলাফল", "VERIFICATION RESULT")}</p><h2>{tx("সাময়িকভাবে স্থগিত", "PROVISIONALLY HELD")}</h2><span>{tx("কর্মকর্তার পর্যালোচনা চলমান", "Officer review in progress")}</span></div><strong>95<small>/100</small></strong></div>
-            <div className="receipt-main"><div className="receipt-details"><dl><div><dt>{tx("Verification ID", "Verification ID")}</dt><dd>VFY-BD-2026-00105</dd></div><div><dt>{tx("Parcel ID", "Parcel ID")}</dt><dd>Parcel 105</dd></div><div><dt>{tx("দলিল ID", "Deed ID")}</dt><dd>DEED-2026-00105</dd></div><div><dt>{tx("যাচাইয়ের সময়", "Verified at")}</dt><dd>17 Oct 2026 · 10:42 BST</dd></div></dl><div className="audit-hash"><span>{tx("Audit hash", "Audit hash")}</span><code>0x9f2a7c48b17d993e…c82105fd</code><small>SHA-256 · SIM-BLOCK-0091</small></div></div><div className="qr-area"><QrPattern /><b>{tx("যাচাই করতে scan করুন", "Scan to verify")}</b><small>verify.landtrust.demo/v/00105</small></div></div>
+            <div className={`receipt-status ${cleanCase ? "receipt-clear" : ""}`}><div className="status-shield">{cleanCase ? "✓" : "!"}</div><div><p>{tx("যাচাইয়ের ফলাফল", "VERIFICATION RESULT")}</p><h2>{cleanCase ? tx("যাচাই সফল", "VERIFIED") : tx("সাময়িকভাবে স্থগিত", "PROVISIONALLY HELD")}</h2><span>{cleanCase ? tx("সব official record মিলে গেছে", "All official records match") : tx("ঊর্ধ্বতন কর্মকর্তার পর্যালোচনা প্রয়োজন", "Senior officer review required")}</span></div><strong>{cleanCase ? "10" : "95"}<small>/100</small></strong></div>
+            <div className="receipt-main"><div className="receipt-details"><dl><div><dt>{tx("Verification ID", "Verification ID")}</dt><dd>{cleanCase ? "VFY-BD-2026-00208" : "VFY-BD-2026-00105"}</dd></div><div><dt>{tx("Parcel ID", "Parcel ID")}</dt><dd>{cleanCase ? "Parcel 208" : "Parcel 105"}</dd></div><div><dt>{tx("দলিল ID", "Deed ID")}</dt><dd>{cleanCase ? "DEED-2026-00208" : "DEED-2026-00105"}</dd></div><div><dt>{tx("যাচাইয়ের সময়", "Verified at")}</dt><dd>17 Oct 2026 · 10:42 BST</dd></div></dl><div className="audit-hash"><span>{tx("Audit hash", "Audit hash")}</span><code>{cleanCase ? "0x7ac4b8120e1f…c208" : "0x9f2a7c48b17d993e…c82105fd"}</code><small>SHA-256 · SIM-BLOCK-0091</small></div></div><div className="qr-area"><QrPattern /><b>{tx("যাচাই করতে scan করুন", "Scan to verify")}</b><small>verify.landtrust.demo/v/{cleanCase ? "00208" : "00105"}</small></div></div>
             <div className="receipt-footer"><span>◆ {tx("এটি hackathon prototype; সরকারি সনদ নয়।", "Hackathon prototype; not a government certificate.")}</span><b>Generated by LandTrust BD</b></div>
           </article>
           <div className="receipt-actions"><button className="btn primary" onClick={() => window.print()}>▤ {tx("রসিদ প্রিন্ট / PDF", "Print / save PDF")}</button><button className="btn secondary" onClick={() => goTo("ledger")}>≡ {tx("অডিট লেজার দেখুন", "View audit ledger")}</button></div>
@@ -526,7 +590,7 @@ export default function Home() {
       <div className="screen-enter" key={active}>
         <PageHeading eyebrow={tx("স্বচ্ছতা ও জবাবদিহি", "TRANSPARENCY & ACCOUNTABILITY")} title={tx("অডিট লেজার", "Audit Ledger")} description={tx("Prototype-এ সম্পন্ন প্রতিটি action-এর অপরিবর্তনযোগ্য-ধাঁচের timestamped history।", "A tamper-evident-style, timestamped history of every action performed in the prototype.")} />
         <div className="ledger-summary"><div><span className="summary-icon">≡</span><div><b>{events.length + 4}</b><small>{tx("মোট event", "Total events")}</small></div></div><div><span className="summary-icon green">✓</span><div><b>{events.filter((event) => event.tone === "green").length + 3}</b><small>{tx("যাচাইকৃত action", "Verified actions")}</small></div></div><div><span className="summary-icon red">!</span><div><b>{events.filter((event) => event.tone === "red").length + 1}</b><small>{tx("Risk event", "Risk events")}</small></div></div><div className="chain-health"><i /><span><b>{tx("Demo ledger সচল", "Demo ledger healthy")}</b><small>Last anchor: SIM-BLOCK-0091</small></span></div></div>
-        <div className="ledger-card"><div className="ledger-head"><span>{tx("সময়", "Time")}</span><span>{tx("Event ও actor", "Event & actor")}</span><span>{tx("Event ID", "Event ID")}</span><span>Audit hash</span><span>{tx("অবস্থা", "Status")}</span></div>{events.map((event, index) => <div className="ledger-row" key={`${event.id}-${index}`}><time>{event.time}<small>17 Oct 2026</small></time><div className="event-name"><i className={event.tone} /><span><b>{language === "bn" ? event.titleBn : event.titleEn}</b><small>{event.actor}</small></span></div><code>{event.id}</code><code>{event.hash}</code><span className="ledger-ok">✓ {tx("সংরক্ষিত", "Anchored")}</span></div>)}<div className="ledger-row"><time>10:41:58<small>17 Oct 2026</small></time><div className="event-name"><i className="green" /><span><b>{tx("Canonical record তৈরি", "Canonical record created")}</b><small>Normalization Engine</small></span></div><code>EVT-4104</code><code>990a…172e</code><span className="ledger-ok">✓ {tx("সংরক্ষিত", "Anchored")}</span></div></div>
+        <div className="ledger-card"><div className="ledger-head"><span>{tx("সময়", "Time")}</span><span>{tx("Event ও actor", "Event & actor")}</span><span>{tx("Event ID", "Event ID")}</span><span>Audit hash</span><span>{tx("অবস্থা", "Status")}</span></div>{events.map((event, index) => <div className="ledger-row" key={`${event.id}-${index}`}><time>{event.time}<small>17 Oct 2026</small></time><div className="event-name"><i className={event.tone} /><span><b>{language === "bn" ? event.titleBn : event.titleEn}</b><small>{event.actor}</small></span></div><code>{event.id}</code><code>{event.hash}</code><span className="ledger-ok">✓ {tx("সংরক্ষিত", "Anchored")}</span></div>)}<div className="ledger-row"><time>10:41:58<small>17 Oct 2026</small></time><div className="event-name"><i className="green" /><span><b>{tx("Official record তৈরি", "Official record created")}</b><small>Records Engine</small></span></div><code>EVT-4104</code><code>990a…172e</code><span className="ledger-ok">✓ {tx("সংরক্ষিত", "Anchored")}</span></div></div>
         <div className="notice info"><span>◆</span><p>{tx("Production নকশায় blockchain-এ শুধু document hash, event hash, timestamp ও non-PII status রাখা হবে—নাম, NID, দলিলের পূর্ণ তথ্য বা PDF নয়।", "In the production design, blockchain stores only document hashes, event hashes, timestamps and non-PII status—not names, NIDs, full deed data or PDFs.")}</p></div>
       </div>
     );
@@ -534,6 +598,7 @@ export default function Home() {
 
   function renderScreen() {
     switch (active) {
+      case "citizen": return CitizenScreen();
       case "search": return SearchScreen();
       case "comparison": return ComparisonScreen();
       case "timeline": return TimelineScreen();
@@ -541,6 +606,7 @@ export default function Home() {
       case "forensic": return ForensicScreen();
       case "officer": return OfficerScreen();
       case "lock": return LockScreen();
+      case "review": return SeniorReviewScreen();
       case "report": return ReportScreen();
       case "ledger": return LedgerScreen();
       default: return HomeScreen();
@@ -550,7 +616,7 @@ export default function Home() {
   return (
     <div className={`app language-${language}`}>
       <div className="prototype-bar"><span><CalendarDays size={12} />{tx("১৭ অক্টোবর ২০২৬", "17 October 2026")}</span></div>
-      <header className="top-header"><button className="menu-button" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle menu"><Menu size={22} /></button><button className="brand" onClick={() => goTo("home")}><LogoMark /><span><strong>LandTrust BD</strong><small>{tx("সুরক্ষিত ভূমি · স্বচ্ছ লেনদেন", "Secure land · transparent transactions")}</small></span></button><nav className="top-nav"><button className={active === "home" ? "active" : ""} onClick={() => goTo("home")}>{tx("হোম", "Home")}</button><button onClick={() => goTo("search")}>{tx("নাগরিক সেবা", "Citizen")}</button><button className={`restricted-entry ${active === "officer" ? "active" : ""}`} onClick={() => goTo("officer")}><LockKeyhole size={11} />{tx("কর্মকর্তা প্রবেশ", "Officer access")}</button><button onClick={() => goTo("forensic")}>{tx("প্রতিষ্ঠান", "Institution")}</button><button onClick={() => goTo("ledger")}>{tx("স্বচ্ছতা", "Transparency")}</button></nav><div className="header-actions"><button className="language-toggle" onClick={() => setLanguage(language === "bn" ? "en" : "bn")}><span className={language === "bn" ? "active" : ""}>বাং</span><i /><span className={language === "en" ? "active" : ""}>EN</span></button><button className="demo-button" onClick={startDemo}><Play size={12} fill="currentColor" />{tx("Demo", "Demo")}</button></div></header>
+      <header className="top-header"><button className="menu-button" onClick={() => setMobileNav(!mobileNav)} aria-label="Toggle menu"><Menu size={22} /></button><button className="brand" onClick={() => goTo("home")}><LogoMark /><span><strong>LandTrust BD</strong><small>{tx("সুরক্ষিত ভূমি · স্বচ্ছ লেনদেন", "Secure land · transparent transactions")}</small></span></button><nav className="top-nav"><button className={active === "home" ? "active" : ""} onClick={() => goTo("home")}>{tx("হোম", "Home")}</button><button className={active === "citizen" ? "active" : ""} onClick={() => goTo("citizen")}>{tx("নাগরিক সেবা", "Citizen")}</button><button className={`restricted-entry ${active === "officer" ? "active" : ""}`} onClick={() => goTo("officer")}><LockKeyhole size={11} />{tx("কর্মকর্তা প্রবেশ", "Officer access")}</button></nav><div className="header-actions"><button className="language-toggle" onClick={() => setLanguage(language === "bn" ? "en" : "bn")}><span className={language === "bn" ? "active" : ""}>বাং</span><i /><span className={language === "en" ? "active" : ""}>EN</span></button><button className="demo-button" onClick={startDemo}><Play size={12} fill="currentColor" />{tx("Demo", "Demo")}</button></div></header>
 
       <div className="workspace">
         <aside className={`sidebar ${mobileNav ? "open" : ""}`}><div className="side-label">{tx("সেবা মেনু", "SERVICE MENU")}</div>{visibleScreenItems.map((item) => <button key={item.key} className={active === item.key ? "active" : ""} onClick={() => goTo(item.key)}><span className="nav-icon"><ScreenGlyph icon={item.icon} size={17} /></span><span><b>{language === "bn" ? item.bn : item.en}</b><small>{language === "bn" ? item.shortBn : item.shortEn}</small></span>{active === item.key && <i />}</button>)}<div className="privacy-card"><ShieldCheck size={17} /><b>{tx("Privacy by design", "Privacy by design")}</b><p>{tx("কোনো বাস্তব NID বা ব্যক্তিগত তথ্য ব্যবহৃত হয়নি।", "No real NID or personal data is used.")}</p></div></aside>
@@ -558,7 +624,7 @@ export default function Home() {
         <main className="main-content"><div className="breadcrumb"><button onClick={() => goTo("home")}>LandTrust BD</button><span>›</span><b>{language === "bn" ? activeItem.bn : activeItem.en}</b></div>{renderScreen()}<footer><div><b>LandTrust BD</b><span>{tx("ভূমি লেনদেন যাচাইয়ের interactive prototype", "Interactive land-verification prototype")}</span></div><p>{tx("সব তথ্য কাল্পনিক · কোনো সিদ্ধান্ত আইনগত প্রমাণ নয়", "All data is synthetic · No output is legal proof")}</p></footer></main>
       </div>
 
-      {demoStep >= 0 && <div className="demo-dock"><div className="demo-progress"><i style={{ width: `${((demoStep + 1) / demoSteps.length) * 100}%` }} /></div><div className="demo-step-number"><span>{demoStep + 1}</span><small>/ {demoSteps.length}</small></div><div className="demo-copy"><p>{tx("৩ মিনিটের ডেমো", "3-MINUTE DEMO")} · {demoSteps[demoStep].time}</p><b>{language === "bn" ? demoSteps[demoStep].bn : demoSteps[demoStep].en}</b></div><button onClick={nextDemo}>{demoStep === demoSteps.length - 1 ? tx("শেষ করুন", "Finish") : tx("পরবর্তী ধাপ", "Next step")} <span>→</span></button><button className="close-demo" onClick={() => setDemoStep(-1)} aria-label="Close demo">×</button></div>}
+      {demoStep >= 0 && <div className="demo-dock"><div className="demo-progress"><i style={{ width: `${((demoStep + 1) / activeDemoSteps.length) * 100}%` }} /></div><div className="demo-step-number"><span>{demoStep + 1}</span><small>/ {activeDemoSteps.length}</small></div><div className="demo-copy"><p>{tx("ডেমো scenario", "DEMO SCENARIO")} · {activeDemoSteps[demoStep].time}</p><b>{language === "bn" ? activeDemoSteps[demoStep].bn : activeDemoSteps[demoStep].en}</b></div><button onClick={nextDemo}>{demoStep === activeDemoSteps.length - 1 ? tx("শেষ করুন", "Finish") : tx("পরবর্তী ধাপ", "Next step")} <span>→</span></button><button className="close-demo" onClick={() => setDemoStep(-1)} aria-label="Close demo">×</button></div>}
     </div>
   );
 }
