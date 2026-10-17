@@ -232,10 +232,10 @@ export default function Home() {
   }, [active, demoScenario]);
 
   useEffect(() => {
-    if (active !== "home") return;
+    if (active !== "home" || authOpen) return;
     const timer = window.setInterval(() => setHeroSlide((current) => (current + 1) % heroSlides.length), 5200);
     return () => window.clearInterval(timer);
-  }, [active]);
+  }, [active, authOpen]);
 
 function normalizeBangladeshMobile(value: string) {
   const banglaDigits = "০১২৩৪৫৬৭৮৯";
@@ -357,7 +357,7 @@ function normalizeBangladeshMobile(value: string) {
     setAuthOpen(true);
   }
 
-  function AuthScreen() {
+  function renderAuthScreen() {
     const isRegister = authMode === "register";
     return (
       <div className="auth-screen">
@@ -859,7 +859,7 @@ function normalizeBangladeshMobile(value: string) {
     }
   }
 
-  if (authOpen) return <AuthScreen />;
+  if (authOpen) return renderAuthScreen();
 
   return (
     <div className={`app language-${language}`}>
