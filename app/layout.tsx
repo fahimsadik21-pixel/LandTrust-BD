@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "LandTrust BD | ভূমি লেনদেন যাচাই",
   description: "A Bangla-first land verification experience with record comparison, explainable fraud-risk analysis, provisional lock and tamper-evident verification.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
