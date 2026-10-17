@@ -16,6 +16,7 @@
   <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwind-css&logoColor=white" alt="Tailwind CSS 4" />
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.9" />
   <img src="https://img.shields.io/badge/Cloudflare_Workers-Ready-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers" />
+  <img src="https://img.shields.io/badge/Built_with-ChatGPT_%2F_OpenAI-10A37F?logo=openai&logoColor=white" alt="Built with ChatGPT OpenAI" />
 </p>
 
 ---
@@ -24,6 +25,7 @@
 
 **LandTrust BD** হলো একটি **interactive prototype** যা ভূমি লেনদেনে জালিয়াতি শনাক্ত ও প্রতিরোধে স্মার্ট যাচাই ব্যবস্থা দেখায়। 
 
+> 🤖 **AI Assistant:** এই প্রোটোটাইপটি **OpenAI-এর ChatGPT AI Assistant** ব্যবহার করে তৈরি ও সাজানো হয়েছে।  
 > ⚠️ **গুরুত্বপূর্ণ:** এটি কোনো সরকারি ওয়েবসাইট, live land-record service বা legal verification tool **নয়**।  
 > সব ব্যক্তি, parcel, deed ও audit data সম্পূর্ণ **synthetic/কাল্পনিক**।
 
@@ -187,6 +189,15 @@ LandTrust-BD/
 
 ---
 
+## 🤖 স্বীকৃতি ও এআই সহায়তা | Acknowledgements
+
+এই প্রোটোটাইপটি **OpenAI**-এর **ChatGPT (AI Assistant)** ব্যবহার করে পরিকল্পিত, কোড আর্কিটেকচার তৈরি এবং ডেভেলপ করা হয়েছে।
+
+- **AI Model/Platform:** ChatGPT / OpenAI
+- **Development Role:** কোডস্ট্রাকচার, UI/UX উপাদান ও প্রোটোটাইপ লজিক জেনারেশন
+
+---
+
 ## 📜 License
 
 This project is a hackathon prototype. All data is synthetic. No output constitutes legal proof.
@@ -195,4 +206,7 @@ This project is a hackathon prototype. All data is synthetic. No output constitu
 
 <p align="center">
   <strong>LandTrust BD</strong> · সুরক্ষিত ভূমি · স্বচ্ছ লেনদেন<br />
+  <sub>Powered by ChatGPT (OpenAI)</sub>
 </p>
+
+
