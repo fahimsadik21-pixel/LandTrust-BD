@@ -20,6 +20,8 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  LogOut,
+  UserRound,
   UserRoundCog,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -40,6 +42,28 @@ type ScreenKey =
   | "ledger";
 
 type DemoScenario = "corrupted" | "clean";
+type AuthMode = "login" | "register";
+
+type AuthFormState = {
+  name: string;
+  age: string;
+  mobile: string;
+  password: string;
+  confirmPassword: string;
+};
+
+type StoredUser = {
+  name: string;
+  age: string;
+  mobile: string;
+  passwordHash: string;
+  createdAt: string;
+};
+
+type AuthSession = Pick<StoredUser, "name" | "age" | "mobile">;
+
+const AUTH_USERS_KEY = "landtrust-bd-demo-users";
+const AUTH_SESSION_KEY = "landtrust-bd-demo-session";
 
 type AuditEvent = {
   id: string;
@@ -171,12 +195,30 @@ export default function Home() {
   const [parcelStatus, setParcelStatus] = useState<"idle" | "checking" | "created">("idle");
   const [events, setEvents] = useState<AuditEvent[]>(initialEvents);
   const [heroSlide, setHeroSlide] = useState(0);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [authUser, setAuthUser] = useState<AuthSession | null>(null);
+  const [authForm, setAuthForm] = useState<AuthFormState>({ name: "", age: "", mobile: "", password: "", confirmPassword: "" });
+  const [authError, setAuthError] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const tx = (bn: string, en: string) => bilingual(language, bn, en);
   const activeItem = screenItems.find((item) => item.key === active) ?? screenItems[0];
   const visibleScreenItems = screenItems.filter((item) => !["citizen", "officer"].includes(item.key));
   const activeDemoSteps = demoScenario === "clean" ? cleanDemoSteps : demoSteps;
   const hashMatch = Boolean(computedHash) && computedHash === registeredHash;
+
+  useEffect(() => {
+    try {
+      const savedSession = window.localStorage.getItem(AUTH_SESSION_KEY);
+      if (savedSession) setAuthUser(JSON.parse(savedSession) as AuthSession);
+    } catch {
+      window.localStorage.removeItem(AUTH_SESSION_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     if (active !== "risk") return;
@@ -194,6 +236,182 @@ export default function Home() {
     const timer = window.setInterval(() => setHeroSlide((current) => (current + 1) % heroSlides.length), 5200);
     return () => window.clearInterval(timer);
   }, [active]);
+
+function normalizeBangladeshMobile(value: string) {
+  const banglaDigits = "০১২৩৪৫৬৭৮৯";
+  const digits = value
+    .replace(/[০-৯]/g, (digit) => String(banglaDigits.indexOf(digit)))
+    .replace(/\D/g, "");
+    if (digits.startsWith("8801")) return `0${digits.slice(3)}`;
+    return digits;
+  }
+
+  function isValidBangladeshMobile(value: string) {
+    return /^01[3-9]\d{8}$/.test(value);
+  }
+
+  function readStoredUsers(): StoredUser[] {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(AUTH_USERS_KEY) ?? "[]");
+      return Array.isArray(parsed) ? parsed as StoredUser[] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function updateAuthField(field: keyof AuthFormState, value: string) {
+    setAuthForm((current) => ({ ...current, [field]: value }));
+    setAuthError("");
+    setAuthNotice("");
+  }
+
+  function openAuth(mode: AuthMode = "login") {
+    setAuthMode(mode);
+    setAuthOpen(true);
+    setAuthError("");
+    setAuthNotice("");
+    setMobileNav(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function switchAuthMode(mode: AuthMode) {
+    setAuthMode(mode);
+    setAuthError("");
+    setAuthNotice("");
+    setAuthForm((current) => ({ ...current, password: "", confirmPassword: "" }));
+  }
+
+  async function handleRegister(event: FormEvent) {
+    event.preventDefault();
+    setAuthError("");
+    setAuthNotice("");
+    const name = authForm.name.trim();
+    const mobile = normalizeBangladeshMobile(authForm.mobile);
+    const age = Number(authForm.age);
+    if (!name || !authForm.age || !mobile || !authForm.password || !authForm.confirmPassword) {
+      setAuthError(tx("সব প্রয়োজনীয় ঘর পূরণ করুন।", "Please complete every required field."));
+      return;
+    }
+    if (!isValidBangladeshMobile(mobile)) {
+      setAuthError(tx("সঠিক বাংলাদেশি মোবাইল নম্বর দিন—যেমন ০১৭XXXXXXXX।", "Enter a valid Bangladesh mobile number, for example 017XXXXXXXX."));
+      return;
+    }
+    if (!Number.isInteger(age) || age < 18 || age > 120) {
+      setAuthError(tx("বয়স ১৮ থেকে ১২০ বছরের মধ্যে দিন।", "Enter an age between 18 and 120."));
+      return;
+    }
+    if (authForm.password.length < 6) {
+      setAuthError(tx("পাসওয়ার্ডে কমপক্ষে ৬টি অক্ষর দিন।", "Use at least 6 characters for the password."));
+      return;
+    }
+    if (authForm.password !== authForm.confirmPassword) {
+      setAuthError(tx("দুটি পাসওয়ার্ড এক নয়।", "The two passwords do not match."));
+      return;
+    }
+    const users = readStoredUsers();
+    if (users.some((user) => user.mobile === mobile)) {
+      setAuthError(tx("এই মোবাইল নম্বর দিয়ে ইতিমধ্যে নিবন্ধন করা হয়েছে।", "This mobile number is already registered."));
+      return;
+    }
+    setAuthBusy(true);
+    const passwordHash = await digestText(authForm.password);
+    const user: StoredUser = { name, age: String(age), mobile, passwordHash, createdAt: new Date().toISOString() };
+    window.localStorage.setItem(AUTH_USERS_KEY, JSON.stringify([...users, user]));
+    setAuthForm({ name, age: String(age), mobile, password: "", confirmPassword: "" });
+    setAuthMode("login");
+    setAuthNotice(tx("নিবন্ধন সফল হয়েছে। এখন মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে প্রবেশ করুন।", "Registration successful. Now sign in with your mobile number and password."));
+    setAuthBusy(false);
+  }
+
+  async function handleLogin(event: FormEvent) {
+    event.preventDefault();
+    setAuthError("");
+    setAuthNotice("");
+    const mobile = normalizeBangladeshMobile(authForm.mobile);
+    if (!isValidBangladeshMobile(mobile) || !authForm.password) {
+      setAuthError(tx("সঠিক মোবাইল নম্বর ও পাসওয়ার্ড দিন।", "Enter a valid mobile number and password."));
+      return;
+    }
+    setAuthBusy(true);
+    const passwordHash = await digestText(authForm.password);
+    const user = readStoredUsers().find((candidate) => candidate.mobile === mobile && candidate.passwordHash === passwordHash);
+    if (!user) {
+      setAuthError(tx("মোবাইল নম্বর বা পাসওয়ার্ড সঠিক নয়। আগে নিবন্ধন করে নিন।", "The mobile number or password is incorrect. Register first if needed."));
+      setAuthBusy(false);
+      return;
+    }
+    const session: AuthSession = { name: user.name, age: user.age, mobile: user.mobile };
+    window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+    setAuthUser(session);
+    setAuthBusy(false);
+    setAuthOpen(false);
+    setAuthNotice("");
+  }
+
+  function logout() {
+    window.localStorage.removeItem(AUTH_SESSION_KEY);
+    setAuthUser(null);
+    setAuthMode("login");
+    setAuthForm((current) => ({ ...current, password: "", confirmPassword: "" }));
+    setAuthNotice(tx("আপনি সফলভাবে বের হয়েছেন।", "You have been signed out successfully."));
+    setAuthOpen(true);
+  }
+
+  function AuthScreen() {
+    const isRegister = authMode === "register";
+    return (
+      <div className="auth-screen">
+        <div className="auth-orb auth-orb-one" />
+        <div className="auth-orb auth-orb-two" />
+        <div className="auth-grid-lines" />
+        <header className="auth-topbar">
+          <button className="auth-brand" onClick={() => setAuthOpen(false)} aria-label={tx("প্রোটোটাইপে ফিরুন", "Back to prototype")}>
+            <LogoMark compact />
+            <span><strong>LandTrust BD</strong><small>{tx("সুরক্ষিত ভূমি · স্বচ্ছ লেনদেন", "Secure land · transparent transactions")}</small></span>
+          </button>
+          <div className="auth-top-actions">
+            <button className="language-toggle" onClick={() => setLanguage(language === "bn" ? "en" : "bn")} aria-label={tx("ভাষা বদলান", "Change language")}><span className={language === "bn" ? "active" : ""}>বাং</span><i /><span className={language === "en" ? "active" : ""}>EN</span></button>
+            <button className="auth-back" onClick={() => setAuthOpen(false)}><ArrowLeftRight size={14} />{tx("প্রোটোটাইপে ফিরুন", "Back to prototype")}</button>
+          </div>
+        </header>
+        <main className="auth-layout">
+          <section className="auth-story">
+            <div className="auth-story-kicker"><span className="pulse-dot" />{tx("নিরাপদ ডিজিটাল প্রবেশ", "SECURE DIGITAL ACCESS")}</div>
+            <h1>{tx("ভূমি যাচাই শুরু হোক আপনার পরিচয় দিয়ে।", "Start a trusted land check with your identity.")}</h1>
+            <p>{tx("একটি সহজ অ্যাকাউন্ট তৈরি করে পার্সেল, দলিল ও ঝুঁকি বিশ্লেষণের ডেমো সেবা নিজের জায়গা থেকে ব্যবহার করুন।", "Create a simple account to use the parcel, deed and risk-analysis demo services from one place.")}</p>
+            <div className="auth-benefits">
+              <div><span>১</span><div><b>{tx("সহজ নিবন্ধন", "Simple registration")}</b><small>{tx("বাংলাদেশি মোবাইল নম্বর দিয়ে শুরু করুন", "Start with a Bangladesh mobile number")}</small></div></div>
+              <div><span>২</span><div><b>{tx("এক জায়গায় যাচাই", "One place to verify")}</b><small>{tx("রেকর্ড, দলিল ও ঝুঁকির ফলাফল দেখুন", "View records, deeds and risk results")}</small></div></div>
+              <div><span>৩</span><div><b>{tx("স্পষ্ট পরবর্তী ধাপ", "A clear next step")}</b><small>{tx("নাগরিক সেবা বা কর্মকর্তার পথ বুঝে নিন", "Understand the citizen or officer path")}</small></div></div>
+            </div>
+            <div className="auth-trust-note"><ShieldCheck size={17} /><span><b>{tx("ডেমো গোপনীয়তা", "Demo privacy")}</b>{tx("এই prototype-এ তথ্য শুধু আপনার browser-এ থাকে।", "Your demo profile stays only in this browser.")}</span></div>
+          </section>
+          <section className="auth-card" aria-labelledby="auth-title">
+            <div className="auth-card-glow" />
+            <div className="auth-card-head"><div className="auth-card-icon"><UserRound size={20} /></div><div><p className="eyebrow">LANDTRUST ACCOUNT</p><h2 id="auth-title">{isRegister ? tx("নতুন অ্যাকাউন্ট তৈরি করুন", "Create an account") : tx("আপনার অ্যাকাউন্টে প্রবেশ করুন", "Sign in to your account")}</h2></div></div>
+            <div className="auth-tabs" role="tablist" aria-label={tx("অ্যাকাউন্টের ধরন", "Account action")}><button role="tab" aria-selected={!isRegister} className={!isRegister ? "active" : ""} onClick={() => switchAuthMode("login")}>{tx("প্রবেশ", "Sign in")}</button><button role="tab" aria-selected={isRegister} className={isRegister ? "active" : ""} onClick={() => switchAuthMode("register")}>{tx("নিবন্ধন", "Register")}</button></div>
+            {authNotice && <div className="auth-message success" role="status"><BadgeCheck size={16} /><span>{authNotice}</span></div>}
+            {authError && <div className="auth-message error" role="alert"><ShieldAlert size={16} /><span>{authError}</span></div>}
+            {isRegister ? <form className="auth-form" onSubmit={handleRegister}>
+              <div className="auth-field-row"><label className="auth-field"><span>{tx("পূর্ণ নাম", "Full name")} <i>*</i></span><input value={authForm.name} onChange={(event) => updateAuthField("name", event.target.value)} placeholder={tx("আপনার নাম লিখুন", "Enter your name")} autoComplete="name" required /></label><label className="auth-field"><span>{tx("বয়স", "Age")} <i>*</i></span><input type="number" min="18" max="120" value={authForm.age} onChange={(event) => updateAuthField("age", event.target.value)} placeholder="১৮" autoComplete="bday" required /></label></div>
+              <label className="auth-field"><span>{tx("বাংলাদেশি মোবাইল নম্বর", "Bangladesh mobile number")} <i>*</i></span><div className="auth-input-wrap"><span className="country-code">+৮৮০</span><input inputMode="tel" value={authForm.mobile} onChange={(event) => updateAuthField("mobile", event.target.value)} placeholder="০১৭XXXXXXXX" autoComplete="tel" required /></div><small>{tx("১১ সংখ্যার নম্বর, যেমন ০১৭১২৩৪৫৬৭৮", "11 digits, for example 01712345678")}</small></label>
+              <label className="auth-field"><span>{tx("পাসওয়ার্ড", "Password")} <i>*</i></span><div className="auth-input-wrap"><input type={showPassword ? "text" : "password"} value={authForm.password} onChange={(event) => updateAuthField("password", event.target.value)} placeholder={tx("কমপক্ষে ৬টি অক্ষর", "At least 6 characters")} autoComplete="new-password" required /><button type="button" className="auth-password-toggle" onClick={() => setShowPassword((current) => !current)}>{showPassword ? tx("লুকান", "Hide") : tx("দেখুন", "Show")}</button></div></label>
+              <label className="auth-field"><span>{tx("পাসওয়ার্ড আবার লিখুন", "Confirm password")} <i>*</i></span><div className="auth-input-wrap"><input type={showConfirmPassword ? "text" : "password"} value={authForm.confirmPassword} onChange={(event) => updateAuthField("confirmPassword", event.target.value)} placeholder={tx("পাসওয়ার্ড মিলিয়ে দিন", "Repeat your password")} autoComplete="new-password" required /><button type="button" className="auth-password-toggle" onClick={() => setShowConfirmPassword((current) => !current)}>{showConfirmPassword ? tx("লুকান", "Hide") : tx("দেখুন", "Show")}</button></div></label>
+              <button className="auth-submit" disabled={authBusy}>{authBusy ? tx("অ্যাকাউন্ট তৈরি হচ্ছে…", "Creating account…") : tx("নিবন্ধন সম্পন্ন করুন", "Complete registration")} <ArrowRight size={17} /></button>
+            </form> : <form className="auth-form" onSubmit={handleLogin}>
+              <label className="auth-field"><span>{tx("মোবাইল নম্বর", "Mobile number")} <i>*</i></span><div className="auth-input-wrap"><span className="country-code">+৮৮০</span><input inputMode="tel" value={authForm.mobile} onChange={(event) => updateAuthField("mobile", event.target.value)} placeholder="০১৭XXXXXXXX" autoComplete="tel" required /></div></label>
+              <label className="auth-field"><span>{tx("পাসওয়ার্ড", "Password")} <i>*</i></span><div className="auth-input-wrap"><input type={showPassword ? "text" : "password"} value={authForm.password} onChange={(event) => updateAuthField("password", event.target.value)} placeholder={tx("আপনার পাসওয়ার্ড", "Enter your password")} autoComplete="current-password" required /><button type="button" className="auth-password-toggle" onClick={() => setShowPassword((current) => !current)}>{showPassword ? tx("লুকান", "Hide") : tx("দেখুন", "Show")}</button></div></label>
+              <div className="auth-form-meta"><span><ShieldCheck size={14} />{tx("ডেমো সেশন নিরাপদভাবে চালু হবে", "Demo session starts securely")}</span></div>
+              <button className="auth-submit" disabled={authBusy}>{authBusy ? tx("প্রবেশ করা হচ্ছে…", "Signing in…") : tx("নিরাপদে প্রবেশ করুন", "Sign in securely")} <ArrowRight size={17} /></button>
+            </form>}
+            <p className="auth-switch">{isRegister ? tx("আগে থেকেই অ্যাকাউন্ট আছে?", "Already have an account?") : tx("নতুন ব্যবহারকারী?", "New to LandTrust?")} <button onClick={() => switchAuthMode(isRegister ? "login" : "register")}>{isRegister ? tx("প্রবেশ করুন", "Sign in") : tx("নিবন্ধন করুন", "Create one")}</button></p>
+            {authUser && <div className="auth-session"><div><span className="session-avatar">{authUser.name.slice(0, 1)}</span><span><b>{authUser.name}</b><small>{authUser.mobile}</small></span></div><button onClick={logout}><LogOut size={14} />{tx("বের হন", "Sign out")}</button></div>}
+          </section>
+        </main>
+        <footer className="auth-footer"><span>LandTrust BD</span><span>{tx("কাল্পনিক ডেমো · বাস্তব সরকারি অ্যাকাউন্ট নয়", "Synthetic demo · not a real government account")}</span></footer>
+      </div>
+    );
+  }
 
   function goTo(screen: ScreenKey) {
     if (screen === "risk") setRiskScore(0);
@@ -257,6 +475,10 @@ export default function Home() {
   async function digestBytes(bytes: ArrayBuffer) {
     const digest = await crypto.subtle.digest("SHA-256", bytes);
     return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function digestText(value: string) {
+    return digestBytes(new TextEncoder().encode(value).buffer);
   }
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
@@ -637,10 +859,12 @@ export default function Home() {
     }
   }
 
+  if (authOpen) return <AuthScreen />;
+
   return (
     <div className={`app language-${language}`}>
       <div className="prototype-bar"><span><CalendarDays size={12} />{tx("১৭ অক্টোবর ২০২৬", "17 October 2026")}</span></div>
-      <header className="top-header"><button className="menu-button" onClick={() => setMobileNav(!mobileNav)} aria-label={tx("মেনু খুলুন", "Toggle menu")}><Menu size={22} /></button><button className="brand" onClick={() => goTo("home")}><LogoMark /><span><strong>LandTrust BD</strong><small>{tx("সুরক্ষিত ভূমি · স্বচ্ছ লেনদেন", "Secure land · transparent transactions")}</small></span></button><nav className="top-nav"><button className={active === "home" ? "active" : ""} onClick={() => goTo("home")}>{tx("হোম", "Home")}</button><button className={active === "citizen" ? "active" : ""} onClick={() => goTo("citizen")}>{tx("নাগরিক সেবা", "Citizen")}</button><button className={`restricted-entry ${active === "officer" ? "active" : ""}`} onClick={() => goTo("officer")}><LockKeyhole size={11} />{tx("কর্মকর্তা প্রবেশ", "Officer access")}</button></nav><div className="header-actions"><button className="language-toggle" onClick={() => setLanguage(language === "bn" ? "en" : "bn")}><span className={language === "bn" ? "active" : ""}>বাং</span><i /><span className={language === "en" ? "active" : ""}>EN</span></button><button className="demo-button" onClick={startDemo}><Play size={12} fill="currentColor" />{tx("ডেমো", "Demo")}</button></div></header>
+      <header className="top-header"><button className="menu-button" onClick={() => setMobileNav(!mobileNav)} aria-label={tx("মেনু খুলুন", "Toggle menu")}><Menu size={22} /></button><button className="brand" onClick={() => goTo("home")}><LogoMark /><span><strong>LandTrust BD</strong><small>{tx("সুরক্ষিত ভূমি · স্বচ্ছ লেনদেন", "Secure land · transparent transactions")}</small></span></button><nav className="top-nav"><button className={active === "home" ? "active" : ""} onClick={() => goTo("home")}>{tx("হোম", "Home")}</button><button className={active === "citizen" ? "active" : ""} onClick={() => goTo("citizen")}>{tx("নাগরিক সেবা", "Citizen")}</button><button className={`restricted-entry ${active === "officer" ? "active" : ""}`} onClick={() => goTo("officer")}><LockKeyhole size={11} />{tx("কর্মকর্তা প্রবেশ", "Officer access")}</button></nav><div className="header-actions"><button className="account-button" onClick={() => openAuth()}><UserRound size={14} />{authUser ? tx("আমার অ্যাকাউন্ট", "My account") : tx("প্রবেশ / নিবন্ধন", "Sign in / Register")}</button><button className="language-toggle" onClick={() => setLanguage(language === "bn" ? "en" : "bn")}><span className={language === "bn" ? "active" : ""}>বাং</span><i /><span className={language === "en" ? "active" : ""}>EN</span></button><button className="demo-button" onClick={startDemo}><Play size={12} fill="currentColor" />{tx("ডেমো", "Demo")}</button></div></header>
 
       <div className="workspace">
         <aside className={`sidebar ${mobileNav ? "open" : ""}`}><div className="side-label">{tx("সেবা মেনু", "SERVICE MENU")}</div>{visibleScreenItems.map((item) => <button key={item.key} className={active === item.key ? "active" : ""} onClick={() => goTo(item.key)}><span className="nav-icon"><ScreenGlyph icon={item.icon} size={17} /></span><span><b>{language === "bn" ? item.bn : item.en}</b><small>{language === "bn" ? item.shortBn : item.shortEn}</small></span>{active === item.key && <i />}</button>)}<div className="privacy-card"><ShieldCheck size={17} /><b>{tx("নকশাতেই গোপনীয়তা", "Privacy by design")}</b><p>{tx("কোনো বাস্তব এনআইডি বা ব্যক্তিগত তথ্য ব্যবহৃত হয়নি।", "No real NID or personal data is used.")}</p></div></aside>
