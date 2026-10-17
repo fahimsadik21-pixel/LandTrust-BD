@@ -195,5 +195,4 @@ This project is a hackathon prototype. All data is synthetic. No output constitu
 
 <p align="center">
   <strong>LandTrust BD</strong> · সুরক্ষিত ভূমি · স্বচ্ছ লেনদেন<br />
-  <sub>Built with ❤️ for LandTech 2026 P3</sub>
 </p>
