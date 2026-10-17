@@ -206,7 +206,7 @@ This project is a hackathon prototype. All data is synthetic. No output constitu
 
 <p align="center">
   <strong>LandTrust BD</strong> · সুরক্ষিত ভূমি · স্বচ্ছ লেনদেন<br />
-  <sub>Powered by ChatGPT (OpenAI)</sub>
+  
 </p>
 
 
