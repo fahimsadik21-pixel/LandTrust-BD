@@ -174,7 +174,7 @@ export default function Home() {
 
   const tx = (bn: string, en: string) => bilingual(language, bn, en);
   const activeItem = screenItems.find((item) => item.key === active) ?? screenItems[0];
-  const visibleScreenItems = active === "officer" ? screenItems : screenItems.filter((item) => item.key !== "officer");
+  const visibleScreenItems = screenItems.filter((item) => !["citizen", "officer"].includes(item.key));
   const activeDemoSteps = demoScenario === "clean" ? cleanDemoSteps : demoSteps;
   const hashMatch = Boolean(computedHash) && computedHash === registeredHash;
 
@@ -206,8 +206,17 @@ export default function Home() {
     setEvents((current) => [event, ...current]);
   }
 
+  function selectDemoScenario(scenario: DemoScenario, reveal = true) {
+    setDemoScenario(scenario);
+    setQuery(scenario === "clean" ? "Parcel 208" : "Parcel 105");
+    setSearched(reveal);
+    setLockStatus(scenario === "clean" ? "clear" : "locked");
+  }
+
   function runSearch(event?: FormEvent) {
     event?.preventDefault();
+    const nextScenario: DemoScenario = /208/.test(query) ? "clean" : "corrupted";
+    selectDemoScenario(nextScenario);
     setSearched(true);
     addEvent({
       id: `EVT-${4200 + events.length}`,
@@ -222,11 +231,8 @@ export default function Home() {
 
   function startDemo(scenario: DemoScenario = demoScenario) {
     const steps = scenario === "clean" ? cleanDemoSteps : demoSteps;
-    setDemoScenario(scenario);
     setDemoStep(0);
-    setSearched(true);
-    setQuery(scenario === "clean" ? "Parcel 208" : "Parcel 105");
-    setLockStatus(scenario === "clean" ? "clear" : "locked");
+    selectDemoScenario(scenario);
     goTo(steps[0].screen);
   }
 
@@ -416,6 +422,24 @@ export default function Home() {
       <div className="screen-enter" key={active}>
         <PageHeading eyebrow={tx("ধাপ ০১ · নাগরিক সেবা", "STEP 01 · CITIZEN SERVICE")} title={tx("পার্সেল ও দলিল অনুসন্ধান", "Parcel & Deed Search")} description={tx("Parcel identifier অথবা synthetic deed ID দিয়ে একীভূত যাচাই শুরু করুন।", "Start a unified verification with a parcel identifier or synthetic deed ID.")} />
         <div className="notice info"><span>i</span><p><b>{tx("ডেমো তথ্য:", "Demo data:")}</b> {tx("‘Parcel 105’ বা ‘DEED-2026-00105’ লিখুন। কোনো বাস্তব ব্যক্তিগত তথ্য ব্যবহার করবেন না।", "Use ‘Parcel 105’ or ‘DEED-2026-00105’. Do not enter real personal data.")}</p></div>
+        <div className="search-scenario-selector">
+          <div className="search-scenario-heading">
+            <span className="eyebrow">{tx("ডেমো পথ বেছে নিন", "CHOOSE A DEMO PATH")}</span>
+            <b>{tx("একই পেজে দুই ধরনের verification pipeline দেখুন", "Preview both verification pipelines on this page")}</b>
+          </div>
+          <div className="search-scenario-options">
+            <button type="button" className={`search-scenario-option danger ${!cleanCase ? "active" : ""}`} onClick={() => selectDemoScenario("corrupted")}>
+              <span className="scenario-mini-icon">!</span>
+              <span><strong>Parcel 105</strong><small>{tx("ঝুঁকিপূর্ণ pipeline · review প্রয়োজন", "Risk pipeline · review required")}</small></span>
+              <i>→</i>
+            </button>
+            <button type="button" className={`search-scenario-option safe ${cleanCase ? "active" : ""}`} onClick={() => selectDemoScenario("clean")}>
+              <span className="scenario-mini-icon">✓</span>
+              <span><strong>Parcel 208</strong><small>{tx("ঝুঁকিমুক্ত pipeline · normal processing", "Clean pipeline · normal processing")}</small></span>
+              <i>→</i>
+            </button>
+          </div>
+        </div>
         <form className="search-panel" onSubmit={runSearch}>
           <div className="search-type">
             <label className="radio active"><span>●</span>{tx("Parcel ID", "Parcel ID")}</label>
@@ -424,10 +448,10 @@ export default function Home() {
           <div className="search-box"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Parcel or deed ID" placeholder={tx("Parcel 105 অথবা DEED-2026-00105", "Parcel 105 or DEED-2026-00105")} /><button>{tx("যাচাই করুন", "Verify now")} <i>→</i></button></div>
           <div className="example-row"><span>{tx("উদাহরণ", "Try")}</span><button type="button" onClick={() => setQuery("Parcel 105")}>Parcel 105</button><button type="button" onClick={() => setQuery("DEED-2026-00105")}>DEED-2026-00105</button></div>
         </form>
-        {searched && <div className="result-card reveal">
+        {searched && <div className="result-card reveal" data-scenario={cleanCase ? "clean" : "corrupted"}>
           <div className="result-top"><div className="success-mark">✓</div><div><p className="eyebrow">{tx("SYNTHETIC RECORD FOUND", "SYNTHETIC RECORD FOUND")}</p><h2>{cleanCase ? "Parcel 208" : "Parcel 105"}</h2><p>{tx("সাভার মডেল জোন · ঢাকা · Demo Mouza 07", "Savar Model Zone · Dhaka · Demo Mouza 07")}</p></div><span className={`risk-pill ${cleanCase ? "low" : "high"}`}>{cleanCase ? tx("নিম্ন ঝুঁকি", "LOW RISK") : tx("উচ্চ ঝুঁকি", "HIGH RISK")}</span></div>
           <div className="record-grid"><div><span>{tx("দলিল ID", "Deed ID")}</span><b>{cleanCase ? "DEED-2026-00208" : "DEED-2026-00105"}</b></div><div><span>{tx("খতিয়ান", "Khatian")}</span><b>{cleanCase ? "RS-5208" : "RS-4405"}</b></div><div><span>{tx("জমির পরিমাণ", "Land area")}</span><b>12.50 {tx("শতক", "decimal")}</b></div><div><span>{tx("বর্তমান অবস্থা", "Current status")}</span><b className={cleanCase ? "green-text" : "red-text"}>{cleanCase ? tx("নিয়মিত processing", "Normal processing") : tx("পর্যালোচনা প্রয়োজন", "Review required")}</b></div></div>
-          <div className="pipeline">
+          <div className="pipeline" data-scenario={cleanCase ? "clean" : "corrupted"}>
             {[tx("ইনপুট", "Input"), tx("স্বাভাবিকীকরণ", "Normalize"), "SHA-256", tx("রেকর্ড মিল", "Cross-match"), tx("ঝুঁকি বিশ্লেষণ", "Risk")].map((label, index) => <div className="pipe-step" key={label} style={{ "--delay": `${index * 160}ms` } as React.CSSProperties}><span>{index < 4 || cleanCase ? "✓" : "!"}</span><small>{label}</small></div>)}
           </div>
           <button className="btn primary next-action" onClick={() => goTo("comparison")}>{tx("রেকর্ড তুলনা দেখুন", "View record comparison")} <span>→</span></button>
